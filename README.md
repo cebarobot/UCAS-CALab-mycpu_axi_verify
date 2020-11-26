@@ -1,4 +1,4 @@
-# UCAS Computer Architecture Lab (Lab 11~12 & 14~15)
+# UCAS Computer Architecture Lab (Lab 11\~12 & 14\~15)
 > Powered by ceba & ywk
 
 此仓库内容配合 `CPU_AXI_CDE` 实验环境使用，对应 `CPU_AXI_CDE\mycpu_axi_verify`。
