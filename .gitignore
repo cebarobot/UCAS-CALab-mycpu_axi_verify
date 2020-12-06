@@ -15,13 +15,17 @@
 #Source files:
 #########
 #Do NOT ignore Verilog
-!rtl/**/*.v
-!rtl/**/*.h
+!rtl/axi_wrap/**/*.v
+!rtl/ram_wrap/**/*.v
+!rtl/CONFREG/**/*.v
+!rtl/myCPU/**/*.v
+!rtl/myCPU/**/*.h
+!rtl/*.v
 !testbench/**/*.v
 #########
 #IP files
 #########
-!rtl/**/*.xci
+!rtl/xilinx_ip/**/*.xci
 #########
 #Simulation logic analyzer
 #########
@@ -35,4 +39,4 @@
 #Constraint files
 #########
 #Do NOT ignore *.xdc files
-!run_vivado/**/*.xdc
+!run_vivado/*.xdc
