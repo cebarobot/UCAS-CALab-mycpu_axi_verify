@@ -32,7 +32,10 @@ module mem_stage(
     input                           ws_ex        ,
     input                           ws_eret      ,
     output                          ms_ex_o      ,
-    output                          ms_eret
+    output                          ms_eret      ,
+
+    //lab14
+    output                          ms_tlb_sign_o
 );
 
 reg         ms_valid;
@@ -86,6 +89,10 @@ wire        es_to_ms_data_ok;
 wire [31:0] es_to_ms_data;
 
 assign {
+    ms_tlb_sign     ,  //166:166
+    ms_inst_tlbp    ,  //165:165
+    ms_inst_tlbr    ,  //164:164
+    ms_inst_tlbwi   ,  //163:163
     es_to_ms_data_ok,  //162:162
     es_to_ms_data   ,  //161:130
     es_to_ms_excode ,  //129:125
@@ -117,6 +124,10 @@ wire [ 3:0] ms_gr_strb;
 wire [31:0] ms_final_result;
 
 assign ms_to_ws_bus = {
+    ms_tlb_sign     ,  //127:127
+    ms_inst_tlbp    ,  //126:126
+    ms_inst_tlbr    ,  //125:125
+    ms_inst_tlbwi   ,  //124:124
     ms_excode       ,  //123:119
     ms_badvaddr     ,  //118:87  
     ms_cp0_addr     ,  //86:79
@@ -252,5 +263,10 @@ assign ms_fwd_valid = {4{ ms_to_ws_valid }} & ms_gr_strb;
 assign ms_blk_valid = ms_valid && ms_res_from_mem && !ms_ready_go && !ws_eret && !ws_ex;
 assign ms_rf_dest   = ms_dest;
 assign ms_rf_data   = ms_final_result;
+
+//lab14
+//search block
+assign ms_entryhi_block = ms_valid && ms_inst_mtc0 && (ms_cp0_addr == 8'b01010000);
+assign ms_tlb_sign_o = ms_tlb_sign;
 
 endmodule

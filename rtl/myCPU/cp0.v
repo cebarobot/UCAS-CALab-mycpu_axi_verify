@@ -1,10 +1,15 @@
-`define CP0_BADV_ADDR   8'b01000000
-`define CP0_COUNT_ADDR  8'b01001000
-`define CP0_COMP_ADDR   8'b01011000
-`define CP0_STATUS_ADDR 8'b01100000
-`define CP0_CAUSE_ADDR  8'b01101000
-`define CP0_EPC_ADDR    8'b01110000
-`define CP0_CONFIG_ADDR 8'b10000000
+`define CP0_BADV_ADDR       8'b01000000
+`define CP0_COUNT_ADDR      8'b01001000
+`define CP0_COMP_ADDR       8'b01011000
+`define CP0_STATUS_ADDR     8'b01100000
+`define CP0_CAUSE_ADDR      8'b01101000
+`define CP0_EPC_ADDR        8'b01110000
+`define CP0_CONFIG_ADDR     8'b10000000
+
+`define CP0_ENTRYHI_ADDR    8'b01010000
+`define CP0_ENTRYLO0_ADDR   8'b00010000
+`define CP0_ENTRYLO1_ADDR   8'b00011000
+`define CP0_INDEX_ADDR      8'b00000000
 
 module cp0(
     input         clk,
@@ -28,7 +33,44 @@ module cp0(
     output [31:0] cp0_epc,
     output [31:0] cp0_badvaddr,
     output [31:0] cp0_count,
-    output [31:0] cp0_compare
+    output [31:0] cp0_compare,
+
+    //lab14
+    //instruction
+    input         tlbp,
+    input         tlbr,
+    input         tlbwi,
+    //reg
+    output [31:0] cp0_entryhi,
+    output [31:0] cp0_entrylo0,
+    output [31:0] cp0_entrylo1,
+    output [31:0] cp0_index,
+    //search0
+    input         s0_found,
+    input [ 3:0]  s0_index,
+    input [19:0]  s0_pfn,
+    input [ 2:0]  s0_c,
+    input         s0_d,
+    input         s0_v,
+    //search1
+    input         s1_found,
+    input [ 3:0]  s1_index,
+    input [19:0]  s1_pfn,
+    input [ 2:0]  s1_c,
+    input         s1_d,
+    input         s1_v,
+    //read port
+    input [              18:0] r_vpn2,     
+    input [               7:0] r_asid,     
+    input                      r_g,     
+    input [              19:0] r_pfn0,     
+    input [               2:0] r_c0,     
+    input                      r_d0,     
+    input                      r_v0,     
+    input [              19:0] r_pfn1,     
+    input [               2:0] r_c1,     
+    input                      r_d1,     
+    input                      r_v1    
     );
 
 
@@ -188,6 +230,201 @@ assign cp0_rdata =
     (cp0_addr == `CP0_BADV_ADDR)? cp0_badvaddr :
     (cp0_addr == `CP0_COUNT_ADDR)? cp0_count :
     (cp0_addr == `CP0_COMP_ADDR)? cp0_compare :
+    (cp0_addr == `CP0_ENTRYHI_ADDR)? cp0_entryhi :
+    (cp0_addr == `CP0_ENTRYLO0_ADDR)? cp0_entrylo0 :
+    (cp0_addr == `CP0_ENTRYLO1_ADDR)? cp0_entrylo1 :
+    (cp0_addr == `CP0_INDEX_ADDR)? cp0_index :
     32'b0;
+
+//lab14
+//ENTRYHI
+reg [18:0] entry_hi_vpn2;
+always @(posedge clk) begin
+    if(mtc0_we && cp0_addr == `CP0_ENTRYHI_ADDR)
+        entry_hi_vpn2 <= cp0_wdata[31:13];
+    else if(tlbr)
+        entry_hi_vpn2 <= r_vpn2;
+end
+
+reg [7:0] entry_hi_asid;
+always @(posedge clk) begin
+    if(mtc0_we && cp0_addr == `CP0_ENTRYHI_ADDR)
+        entry_hi_asid <= cp0_wdata[7:0];
+    else if(tlbr)
+        entry_hi_asid <= r_asid;
+end
+
+assign cp0_entryhi = 
+{
+    entry_hi_vpn2,       //31:13
+    5'b0,                //12:8
+    entry_hi_asid        //7:0
+};
+
+//ENTRYLO0
+reg [19:0] entrylo0_pfn;
+always @(posedge clk) begin
+    if(mtc0_we && cp0_addr == `CP0_ENTRYLO0_ADDR)
+        entrylo0_pfn <= cp0_wdata[25:6];
+    else if(tlbp & s0_found)
+        entrylo0_pfn <= s0_pfn;
+    else if(tlbp & s1_found)
+        entrylo0_pfn <= s1_pfn;
+    else if(tlbr)
+        entrylo0_pfn <= r_pfn0;   
+end
+
+reg [2:0] entrylo0_c;
+always @(posedge clk) begin
+    if(mtc0_we && cp0_addr == `CP0_ENTRYLO0_ADDR)
+        entrylo0_c <= cp0_wdata[5:3];
+    else if(tlbp & s0_found)
+        entrylo0_c <= s0_c;
+    else if(tlbp & s1_found)
+        entrylo0_c <= s1_c;
+    else if(tlbr)
+        entrylo0_c <= r_c0;   
+end
+
+reg entrylo0_d;
+always @(posedge clk) begin
+    if(mtc0_we && cp0_addr == `CP0_ENTRYLO0_ADDR)
+        entrylo0_d <= cp0_wdata[2];
+    else if(tlbp & s0_found)
+        entrylo0_d <= s0_d;
+    else if(tlbp & s1_found)
+        entrylo0_d <= s1_d;
+    else if(tlbr)
+        entrylo0_d <= r_d0;   
+end
+
+reg entrylo0_v;
+always @(posedge clk) begin
+    if(mtc0_we && cp0_addr == `CP0_ENTRYLO0_ADDR)
+        entrylo0_v <= cp0_wdata[1];
+    else if(tlbp & s0_found)
+        entrylo0_v <= s0_v;
+    else if(tlbp & s1_found)
+        entrylo0_v <= s1_v;
+    else if(tlbr)
+        entrylo0_v <= r_v0;   
+end
+
+reg entrylo0_g;
+always @(posedge clk) begin
+    if(mtc0_we && cp0_addr == `CP0_ENTRYLO0_ADDR)
+        entrylo0_g <= cp0_wdata[0];
+    else if(tlbr)
+        entrylo0_g <= r_g;   
+end
+
+assign cp0_entrylo0 =
+{
+    6'b0,               //31:26
+    entrylo0_pfn,       //25:6
+    entrylo0_c,         //5:3
+    entrylo0_d,         //2:2
+    entrylo0_v,         //1:1
+    entrylo0_g          //0:0
+};
+
+
+
+//ENTRYLO1
+reg [19:0] entrylo1_pfn;
+always @(posedge clk) begin
+    if(mtc0_we && cp0_addr == `CP0_ENTRYLO1_ADDR)
+        entrylo1_pfn <= cp0_wdata[25:6];
+    else if(tlbp & s0_found)
+        entrylo1_pfn <= s0_pfn;
+    else if(tlbp & s1_found)
+        entrylo1_pfn <= s1_pfn;
+    else if(tlbr)
+        entrylo1_pfn <= r_pfn1;   
+end
+
+reg [2:0] entrylo1_c;
+always @(posedge clk) begin
+    if(mtc0_we && cp0_addr == `CP0_ENTRYLO1_ADDR)
+        entrylo1_c <= cp0_wdata[5:3];
+    else if(tlbp & s0_found)
+        entrylo1_c <= s0_c;
+    else if(tlbp & s1_found)
+        entrylo1_c <= s1_c;
+    else if(tlbr)
+        entrylo1_c <= r_c1;   
+end
+
+reg entrylo1_d;
+always @(posedge clk) begin
+    if(mtc0_we && cp0_addr == `CP0_ENTRYLO1_ADDR)
+        entrylo1_d <= cp0_wdata[2];
+    else if(tlbp & s0_found)
+        entrylo1_d <= s0_d;
+    else if(tlbp & s1_found)
+        entrylo1_d <= s1_d;
+    else if(tlbr)
+        entrylo1_d <= r_d1;   
+end
+
+reg entrylo1_v;
+always @(posedge clk) begin
+    if(mtc0_we && cp0_addr == `CP0_ENTRYLO1_ADDR)
+        entrylo1_v <= cp0_wdata[1];
+    else if(tlbp & s0_found)
+        entrylo1_v <= s0_v;
+    else if(tlbp & s1_found)
+        entrylo1_v <= s1_v;
+    else if(tlbr)
+        entrylo1_v <= r_v1;   
+end
+
+reg entrylo1_g;
+always @(posedge clk) begin
+    if(mtc0_we && cp0_addr == `CP0_ENTRYLO1_ADDR)
+        entrylo1_g <= cp0_wdata[0];
+    else if(tlbr)
+        entrylo1_g <= r_g;   
+end
+
+assign cp0_entrylo1 =
+{
+    6'b0,               //31:26
+    entrylo1_pfn,       //25:6
+    entrylo1_c,         //5:3
+    entrylo1_d,         //2:2
+    entrylo1_v,         //1:1
+    entrylo1_g          //0:0
+};
+
+//INDEX
+reg index_p;
+always @(posedge clk) begin
+    if(rst)
+        index_p <= 1'b0;
+    else if (tlbp)
+        index_p <= !(s0_found | s1_found);
+end
+
+reg [3:0] index_index;
+always @(posedge clk) begin
+    if(rst)
+        index_index <= 4'b0;
+    else if(mtc0_we && cp0_addr == `CP0_INDEX_ADDR)
+        index_index <= cp0_wdata[3:0];
+    else if(tlbp) begin
+        if(s0_found)
+            index_index <= s0_index;
+        else if(s1_found)
+            index_index <= s1_index;
+    end
+end
+
+assign cp0_index = 
+{
+    index_p,        //31:31
+    27'b0,          //30:4
+    index_index     //3:0
+};
 
 endmodule

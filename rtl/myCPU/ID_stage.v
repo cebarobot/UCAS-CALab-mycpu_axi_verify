@@ -33,7 +33,10 @@ module id_stage(
     input                           ws_ex         ,
 
     input  [31:0]                   cp0_status    ,
-    input  [31:0]                   cp0_cause     
+    input  [31:0]                   cp0_cause     ,
+
+    //lab13-tlbex
+    output                          ds_tlb_sign_o   
 );
 
 reg         ds_valid   ;
@@ -49,6 +52,7 @@ wire        ds_ex;
 wire [31:0] ds_badvaddr;
 wire [ 4:0] ds_excode;
 assign {
+    ds_tlb_sign,
     fs_to_ds_ex,
     ds_badvaddr,
     ds_inst,
@@ -195,6 +199,11 @@ wire        inst_sh;
 wire        inst_swl;
 wire        inst_swr;
 
+//tlb in lab14
+wire        inst_tlbp;
+wire        inst_tlbr;
+wire        inst_tlbwi;      
+
 wire        dst_is_r31;  
 wire        dst_is_rt;   
 
@@ -220,6 +229,10 @@ assign br_bus = {
 };
 
 assign ds_to_es_bus = {
+    ds_tlb_sign ,  //214:214
+    inst_tlbp   ,  //213:213
+    inst_tlbr   ,  //212:212
+    inst_tlbwi  ,  //211:211
     fs_to_ds_ex ,  //210:210
     overflow_inst, //209:209
     ds_excode   ,  //208:204
@@ -391,7 +404,10 @@ assign inst_mtc0    = op_d[6'h10] & rs_d[5'h04] & sa_d[5'h00] & (ds_inst[5:3] ==
 //new inst in lab9
 assign inst_break   = op_d[6'h00] & func_d[6'h0d];
 
-
+//new inst in lab14
+assign inst_tlbp    = op_d[6'h10] & (ds_inst[25] == 1'b1) & (ds_inst[24:6] == 19'b0) & func_d[6'h08];
+assign inst_tlbr    = op_d[6'h10] & (ds_inst[25] == 1'b1) & (ds_inst[24:6] == 19'b0) & func_d[6'h01];
+assign inst_tlbwi   = op_d[6'h10] & (ds_inst[25] == 1'b1) & (ds_inst[24:6] == 19'b0) & func_d[6'h02];
 
 
 assign alu_op[ 0] = inst_add | inst_addi | inst_addu | inst_addiu | inst_lw | inst_sw | inst_jal | inst_bltzal |
@@ -430,7 +446,7 @@ assign dst_is_rt    = inst_addi | inst_addiu | inst_slti | inst_sltiu | inst_lui
 assign gr_we        = ~inst_sw & ~inst_beq & ~inst_bne & ~inst_jr & 
                       ~inst_mtlo & ~inst_mthi & ~inst_div & ~inst_divu & ~inst_mult & ~inst_multu &
                       ~inst_bgez & ~inst_bgtz & ~inst_blez & ~inst_bltz & ~inst_j & ~inst_sb & ~inst_sh & ~inst_swl & ~inst_swr &
-                      ~inst_mtc0 & ~inst_syscall & ~inst_eret & ~inst_break;
+                      ~inst_mtc0 & ~inst_syscall & ~inst_eret & ~inst_break & ~inst_tlbp & ~inst_tlbr & inst_tlbwi;
 assign mem_we       = inst_sw | inst_sh | inst_sb | inst_swl | inst_swr;
 assign mem_re       = inst_lw | inst_lh | inst_lhu | inst_lb | inst_lbu | inst_lwl | inst_lwr;
 
@@ -548,7 +564,7 @@ assign other_inst = !(inst_addu | inst_subu | inst_slt | inst_sltu | inst_and | 
 | inst_srlv | inst_srav | inst_mult | inst_multu | inst_div | inst_divu | inst_mfhi | inst_mflo | inst_mthi | inst_mtlo
 | inst_bgez | inst_bgtz | inst_blez | inst_bltz | inst_j | inst_bltzal | inst_bgezal | inst_jalr | inst_lb | inst_lbu
 | inst_lh | inst_lhu | inst_lwl | inst_lwr | inst_sb | inst_sh | inst_swl | inst_swr | inst_syscall | inst_eret | inst_mfc0
-| inst_mtc0 | inst_break);
+| inst_mtc0 | inst_break | inst_tlbp | inst_tlbr | inst_tlbwi);
 
 wire interrupt;
 
@@ -562,5 +578,8 @@ assign ds_excode = (interrupt) ? `EX_INT :
                    (other_inst) ? `EX_RI :
                    (inst_syscall) ? `EX_SYS :
                    (inst_break) ? `EX_BP : `EX_NO;
+
+//lab14
+assign ds_tlb_sign_o = inst_tlbr | inst_tlbwi;
 
 endmodule

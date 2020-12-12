@@ -40,7 +40,10 @@ module exe_stage(
     input                           ws_ex        ,
     input                           ms_ex        ,
     input                           ms_eret      ,
-    input                           ws_eret
+    input                           ws_eret      ,
+
+    //lab14
+    output                          es_tlb_sign_o
 );
 
 reg         es_valid      ;
@@ -110,6 +113,10 @@ wire [31:0] ds_to_es_badvaddr;
 
 
 assign {
+    es_tlb_sign    ,  //214:214
+    es_inst_tlbp   ,  //213:213
+    es_inst_tlbr   ,  //212:212
+    es_inst_tlbwi  ,  //211:211
     fs_to_ds_ex  ,    //210:210
     overflow_inst,    //209:209
     ds_to_es_excode,  //208:204
@@ -187,6 +194,10 @@ assign es_exe_result =
     es_alu_result;
 
 assign es_to_ms_bus = {
+    es_tlb_sign     ,  //166:166
+    es_inst_tlbp    ,  //165:165
+    es_inst_tlbr    ,  //164:164
+    es_inst_tlbwi   ,  //163:163
     es_data_ok      ,  //162:162
     es_data         ,  //161:130
     es_excode       ,  //129:125
@@ -595,6 +606,7 @@ assign es_excode = (ds_to_es_ex)? ds_to_es_excode :
                     (store_ex)? `EX_ADES :
                     ds_to_es_excode;
 
-
+//lab14-tlb-block
+assign es_tlb_sign_o = es_tlb_sign;
 
 endmodule
