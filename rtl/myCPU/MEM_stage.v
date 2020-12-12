@@ -35,7 +35,9 @@ module mem_stage(
     output                          ms_eret      ,
 
     //lab14
+    output                          ms_entryhi_block,
     output                          ms_tlb_sign_o
+    
 );
 
 reg         ms_valid;
@@ -88,7 +90,11 @@ wire [31:0] ms_data;
 wire        es_to_ms_data_ok;
 wire [31:0] es_to_ms_data;
 
+wire [3:0] ms_s1_index;
+wire       ms_s1_found;  
 assign {
+    ms_s1_index        ,  //171:168
+    ms_s1_found        ,  //167:167
     ms_tlb_sign     ,  //166:166
     ms_inst_tlbp    ,  //165:165
     ms_inst_tlbr    ,  //164:164
@@ -124,6 +130,8 @@ wire [ 3:0] ms_gr_strb;
 wire [31:0] ms_final_result;
 
 assign ms_to_ws_bus = {
+    ms_s1_index        ,  //132:129
+    ms_s1_found        ,  //128:128
     ms_tlb_sign     ,  //127:127
     ms_inst_tlbp    ,  //126:126
     ms_inst_tlbr    ,  //125:125

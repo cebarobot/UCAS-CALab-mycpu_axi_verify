@@ -69,6 +69,58 @@ wire        es_inst_mfc0;
 wire [31:0] cp0_status;
 wire [31:0] cp0_cause;
 
+//tlb
+// search port 0
+wire  [              18:0] s0_vpn2;     
+wire                       s0_odd_page;     
+wire  [               7:0] s0_asid;     
+wire                      s0_found;     
+wire [                3:0] s0_index;   
+wire [              19:0] s0_pfn;     
+wire [               2:0] s0_c;     
+wire                      s0_d;     
+wire                      s0_v; 
+
+// search port 1     
+wire  [              18:0] s1_vpn2;     
+wire                       s1_odd_page;     
+wire  [               7:0] s1_asid;     
+wire                      s1_found;     
+wire [              3:0] s1_index;      
+wire [              19:0] s1_pfn;     
+wire [               2:0] s1_c;     
+wire                      s1_d;     
+wire                      s1_v; 
+
+// write port
+wire                       we;        
+wire  [               3:0] w_index;     
+wire  [              18:0] w_vpn2;     
+wire  [               7:0] w_asid;     
+wire                       w_g;     
+wire  [              19:0] w_pfn0;     
+wire  [               2:0] w_c0;     
+wire                       w_d0;
+wire                       w_v0;     
+wire  [              19:0] w_pfn1;     
+wire  [               2:0] w_c1;     
+wire                       w_d1;     
+wire                       w_v1;
+
+// read port
+wire  [               3:0] r_index;     
+wire  [              18:0] r_vpn2;     
+wire  [               7:0] r_asid;     
+wire                       r_g;     
+wire  [              19:0] r_pfn0;     
+wire  [               2:0] r_c0;     
+wire                       r_d0;
+wire                       r_v0;     
+wire  [              19:0] r_pfn1;     
+wire  [               2:0] r_c1;     
+wire                       r_d1;     
+wire                       r_v1;
+
 
 // inst_sram
 assign inst_sram_wr     = 1'b0;
@@ -235,7 +287,20 @@ exe_stage exe_stage(
     .ws_eret                (ws_eret),
     .ms_ex                  (ms_ex),
     .ms_eret                (ms_eret),
-    .es_inst_mfc0_o         (es_inst_mfc0)
+    .es_inst_mfc0_o         (es_inst_mfc0),
+    //tlb-search1
+    .s1_vpn2            (s1_vpn2),     
+    .s1_odd_page        (s1_odd_page),     
+    .s1_asid            (s1_asid),     
+    .s1_found           (s1_found),     
+    .s1_index           (s1_index),      
+    .s1_pfn             (s1_pfn),     
+    .s1_c               (s1_c),     
+    .s1_d               (s1_d),     
+    .s1_v               (s1_v),
+
+    .ms_entryhi_block       (ms_entryhi_block), 
+    .ws_entryhi_block   (ws_entryhi_block) 
 );
 // MEM stage
 mem_stage mem_stage(
@@ -263,7 +328,9 @@ mem_stage mem_stage(
     .ws_eret                (ws_eret),
     .ms_ex_o                (ms_ex),
     .ms_eret                (ms_eret),
-    .ms_inst_mfc0_o         (ms_inst_mfc0)
+    .ms_inst_mfc0_o         (ms_inst_mfc0),
+
+    .ms_entryhi_block       (ms_entryhi_block) 
 );
 // WB stage
 wb_stage wb_stage(
@@ -288,7 +355,87 @@ wb_stage wb_stage(
     .ws_inst_mfc0_o (ws_inst_mfc0),
     .ws_rf_dest     (ws_rf_dest),
     .cp0_cause      (cp0_cause),
-    .cp0_status     (cp0_status)
-);
+    .cp0_status     (cp0_status),
+    //tlb
+    // write port     
+    .we                 (we),         
+    .w_index            (w_index),     
+    .w_vpn2             (w_vpn2),     
+    .w_asid             (w_asid),     
+    .w_g                (w_g),     
+    .w_pfn0             (w_pfn0),     
+    .w_c0               (w_c0),     
+    .w_d0               (w_d0),
+    .w_v0               (w_v0),     
+    .w_pfn1             (w_pfn1),     
+    .w_c1               (w_c1),     
+    .w_d1               (w_d1),     
+    .w_v1               (w_v1), 
+    // read port 
+    .r_index            (r_index),     
+    .r_vpn2             (r_vpn2),     
+    .r_asid             (r_asid),     
+    .r_g                (r_g),     
+    .r_pfn0             (r_pfn0),     
+    .r_c0               (r_c0),     
+    .r_d0               (r_d0),     
+    .r_v0               (r_v0),     
+    .r_pfn1             (r_pfn1),     
+    .r_c1               (r_c1),     
+    .r_d1               (r_d1),     
+    .r_v1               (r_v1),
 
+    .ws_entryhi_block   (ws_entryhi_block) 
+);
+//TLB 
+tlb tlb(
+    .clk                (clk),  
+    // search port 0
+    .s0_vpn2            (s0_vpn2),       
+    .s0_odd_page        (s0_odd_page),     
+    .s0_asid            (s0_asid),     
+    .s0_found           (s0_found),     
+    .s0_index           (s0_index),   
+    .s0_pfn             (s0_pfn),     
+    .s0_c               (s0_c),     
+    .s0_d               (s0_d),     
+    .s0_v               (s0_v), 
+    // search port 1     
+    .s1_vpn2            (s1_vpn2),     
+    .s1_odd_page        (s1_odd_page),     
+    .s1_asid            (s1_asid),     
+    .s1_found           (s1_found),     
+    .s1_index           (s1_index),      
+    .s1_pfn             (s1_pfn),     
+    .s1_c               (s1_c),     
+    .s1_d               (s1_d),     
+    .s1_v               (s1_v), 
+    // write port     
+    .we                 (we),         
+    .w_index            (w_index),     
+    .w_vpn2             (w_vpn2),     
+    .w_asid             (w_asid),     
+    .w_g                (w_g),     
+    .w_pfn0             (w_pfn0),     
+    .w_c0               (w_c0),     
+    .w_d0               (w_d0),
+    .w_v0               (w_v0),     
+    .w_pfn1             (w_pfn1),     
+    .w_c1               (w_c1),     
+    .w_d1               (w_d1),     
+    .w_v1               (w_v1), 
+    // read port 
+    .r_index            (r_index),     
+    .r_vpn2             (r_vpn2),     
+    .r_asid             (r_asid),     
+    .r_g                (r_g),     
+    .r_pfn0             (r_pfn0),     
+    .r_c0               (r_c0),     
+    .r_d0               (r_d0),     
+    .r_v0               (r_v0),     
+    .r_pfn1             (r_pfn1),     
+    .r_c1               (r_c1),     
+    .r_d1               (r_d1),     
+    .r_v1               (r_v1)     
+);
 endmodule

@@ -45,20 +45,9 @@ module cp0(
     output [31:0] cp0_entrylo0,
     output [31:0] cp0_entrylo1,
     output [31:0] cp0_index,
-    //search0
-    input         s0_found,
-    input [ 3:0]  s0_index,
-    input [19:0]  s0_pfn,
-    input [ 2:0]  s0_c,
-    input         s0_d,
-    input         s0_v,
-    //search1
+    //search-tlbp
     input         s1_found,
     input [ 3:0]  s1_index,
-    input [19:0]  s1_pfn,
-    input [ 2:0]  s1_c,
-    input         s1_d,
-    input         s1_v,
     //read port
     input [              18:0] r_vpn2,     
     input [               7:0] r_asid,     
@@ -266,10 +255,6 @@ reg [19:0] entrylo0_pfn;
 always @(posedge clk) begin
     if(mtc0_we && cp0_addr == `CP0_ENTRYLO0_ADDR)
         entrylo0_pfn <= cp0_wdata[25:6];
-    else if(tlbp & s0_found)
-        entrylo0_pfn <= s0_pfn;
-    else if(tlbp & s1_found)
-        entrylo0_pfn <= s1_pfn;
     else if(tlbr)
         entrylo0_pfn <= r_pfn0;   
 end
@@ -278,10 +263,6 @@ reg [2:0] entrylo0_c;
 always @(posedge clk) begin
     if(mtc0_we && cp0_addr == `CP0_ENTRYLO0_ADDR)
         entrylo0_c <= cp0_wdata[5:3];
-    else if(tlbp & s0_found)
-        entrylo0_c <= s0_c;
-    else if(tlbp & s1_found)
-        entrylo0_c <= s1_c;
     else if(tlbr)
         entrylo0_c <= r_c0;   
 end
@@ -290,10 +271,6 @@ reg entrylo0_d;
 always @(posedge clk) begin
     if(mtc0_we && cp0_addr == `CP0_ENTRYLO0_ADDR)
         entrylo0_d <= cp0_wdata[2];
-    else if(tlbp & s0_found)
-        entrylo0_d <= s0_d;
-    else if(tlbp & s1_found)
-        entrylo0_d <= s1_d;
     else if(tlbr)
         entrylo0_d <= r_d0;   
 end
@@ -302,10 +279,6 @@ reg entrylo0_v;
 always @(posedge clk) begin
     if(mtc0_we && cp0_addr == `CP0_ENTRYLO0_ADDR)
         entrylo0_v <= cp0_wdata[1];
-    else if(tlbp & s0_found)
-        entrylo0_v <= s0_v;
-    else if(tlbp & s1_found)
-        entrylo0_v <= s1_v;
     else if(tlbr)
         entrylo0_v <= r_v0;   
 end
@@ -335,10 +308,6 @@ reg [19:0] entrylo1_pfn;
 always @(posedge clk) begin
     if(mtc0_we && cp0_addr == `CP0_ENTRYLO1_ADDR)
         entrylo1_pfn <= cp0_wdata[25:6];
-    else if(tlbp & s0_found)
-        entrylo1_pfn <= s0_pfn;
-    else if(tlbp & s1_found)
-        entrylo1_pfn <= s1_pfn;
     else if(tlbr)
         entrylo1_pfn <= r_pfn1;   
 end
@@ -347,10 +316,6 @@ reg [2:0] entrylo1_c;
 always @(posedge clk) begin
     if(mtc0_we && cp0_addr == `CP0_ENTRYLO1_ADDR)
         entrylo1_c <= cp0_wdata[5:3];
-    else if(tlbp & s0_found)
-        entrylo1_c <= s0_c;
-    else if(tlbp & s1_found)
-        entrylo1_c <= s1_c;
     else if(tlbr)
         entrylo1_c <= r_c1;   
 end
@@ -359,10 +324,6 @@ reg entrylo1_d;
 always @(posedge clk) begin
     if(mtc0_we && cp0_addr == `CP0_ENTRYLO1_ADDR)
         entrylo1_d <= cp0_wdata[2];
-    else if(tlbp & s0_found)
-        entrylo1_d <= s0_d;
-    else if(tlbp & s1_found)
-        entrylo1_d <= s1_d;
     else if(tlbr)
         entrylo1_d <= r_d1;   
 end
@@ -371,10 +332,6 @@ reg entrylo1_v;
 always @(posedge clk) begin
     if(mtc0_we && cp0_addr == `CP0_ENTRYLO1_ADDR)
         entrylo1_v <= cp0_wdata[1];
-    else if(tlbp & s0_found)
-        entrylo1_v <= s0_v;
-    else if(tlbp & s1_found)
-        entrylo1_v <= s1_v;
     else if(tlbr)
         entrylo1_v <= r_v1;   
 end
@@ -403,7 +360,7 @@ always @(posedge clk) begin
     if(rst)
         index_p <= 1'b0;
     else if (tlbp)
-        index_p <= !(s0_found | s1_found);
+        index_p <= !(s1_found);
 end
 
 reg [3:0] index_index;
@@ -413,10 +370,7 @@ always @(posedge clk) begin
     else if(mtc0_we && cp0_addr == `CP0_INDEX_ADDR)
         index_index <= cp0_wdata[3:0];
     else if(tlbp) begin
-        if(s0_found)
-            index_index <= s0_index;
-        else if(s1_found)
-            index_index <= s1_index;
+        index_index <= s1_index;
     end
 end
 
