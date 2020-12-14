@@ -17,14 +17,19 @@ module wb_stage(
     output [31:0] debug_wb_rf_wdata,
 
     //block
-    output                          ws_inst_mfc0_o,
-    output [4:0]                    ws_rf_dest    ,
+    output          ws_inst_mfc0_o,
+    output [4:0]    ws_rf_dest    ,
     //exception
-    output                          ws_eret  ,
-    output                          ws_ex_o       ,
-    output [31:0]                   cp0_epc       ,
-    output [31:0]                   cp0_status    ,
-    output [31:0]                   cp0_cause     ,
+    output          ws_ex_o       ,
+    output          ws_eret       ,
+    output          ws_after_tlb  ,
+    output [31:0]   cp0_epc       ,
+    output [31:0]   after_tlb_pc  ,
+    output [31:0]   cp0_status    ,
+    output [31:0]   cp0_cause     ,
+    output [31:0]   cp0_entryhi   ,
+
+    //lab14
 
     //tlb-write
     output                       we,        
@@ -53,13 +58,7 @@ module wb_stage(
     input  [              19:0] r_pfn1,     
     input  [               2:0] r_c1,     
     input                       r_d1,     
-    input                       r_v1,
-
-    //lab14
-    output                          ws_entryhi_block,
-    output [31:0]                   cp0_entryhi   ,
-    output                          ws_tlb_sign_o ,
-    output                          tlb_flush
+    input                       r_v1
     
 );
 
@@ -72,13 +71,14 @@ wire [ 4:0] ws_dest;
 wire [31:0] ws_final_result;
 wire [31:0] ws_pc;
 
+wire        ws_ex;
 wire        ws_bd;
 wire        ws_inst_eret;
 wire        ws_inst_syscall;  
 wire        ws_inst_mtc0;
 wire [7:0]  cp0_addr;
-wire [4:0]      ws_excode;
-wire [31:0]     ws_badvaddr;
+wire [4:0]  ws_excode;
+wire [31:0] ws_badvaddr;
 
 wire [3:0] ws_s1_index;
 wire       ws_s1_found;  
@@ -86,13 +86,13 @@ wire       ws_s1_found;
 assign {
     ws_s1_index     ,  //132:129
     ws_s1_found     ,  //128:128
-    ws_tlb_sign     ,  //127:127
+    ws_after_tlb    ,  //127:127
     ws_inst_tlbp    ,  //126:126
     ws_inst_tlbr    ,  //125:125
     ws_inst_tlbwi   ,  //124:124
     ws_excode       ,  //123:119
     ws_badvaddr     ,  //118:87
-    cp0_addr     ,  //86:79
+    cp0_addr        ,  //86:79
     ws_ex           ,  //78:78
     ws_bd           ,  //77:77
     ws_inst_eret    ,  //76:76
@@ -150,7 +150,6 @@ assign ws_inst_mfc0_o = ws_valid && ws_inst_mfc0;
 assign ws_rf_dest = ws_valid ? ws_dest : 5'b0;
 
 assign ws_ex_o = ws_valid && ws_ex;
-// assign cp0_epc = ws_valid && ws_cp0_epc;
 assign cp0_epc = {32{ws_valid}} & ws_cp0_epc;
 assign cp0_cause = {32{ws_valid}} & ws_cp0_cause;
 assign cp0_status = {32{ws_valid}} & ws_cp0_status;
@@ -159,6 +158,8 @@ assign cp0_status = {32{ws_valid}} & ws_cp0_status;
 //init
 assign ext_int_in = 6'b0;
 assign ws_eret = ws_inst_eret && ws_valid;
+
+assign after_tlb_pc = ws_pc;
 
 // TODO
 assign rf_we    = {4{ ws_valid & ~ws_ex }} & ws_gr_strb;
@@ -177,7 +178,7 @@ assign cp0_wdata = ws_final_result;
 
 
 //lab14
-//wire [31:0] cp0_entryhi;
+// wire [31:0] cp0_entryhi;
 wire [31:0] cp0_entrylo0;
 wire [31:0] cp0_entrylo1;
 wire [31:0] cp0_index;
@@ -237,7 +238,7 @@ cp0 u_cp0(
     .clk                (clk),
     .rst                (reset),
     
-    .wb_ex              (ws_ex),
+    .wb_ex              (ws_ex && !ws_after_tlb),
     .wb_bd              (ws_bd),
     .wb_excode          (ws_excode),
     .wb_pc              (ws_pc),
@@ -279,62 +280,6 @@ cp0 u_cp0(
     .r_d1               (r_d1),
     .r_v1               (r_v1)
 );
-
-
-
-// tlb u_tlb(
-//     .clk                (clk),  
-//     // search port 0
-//     .s0_vpn2            (s0_vpn2),       
-//     .s0_odd_page        (s0_odd_page),     
-//     .s0_asid            (s0_asid),     
-//     .s0_found           (s0_found),     
-//     .s0_index           (s0_index),   
-//     .s0_pfn             (s0_pfn),     
-//     .s0_c               (s0_c),     
-//     .s0_d               (s0_d),     
-//     .s0_v               (s0_v), 
-//     // search port 1     
-//     .s1_vpn2            (s1_vpn2),     
-//     .s1_odd_page        (s1_odd_page),     
-//     .s1_asid            (s1_asid),     
-//     .s1_found           (s1_found),     
-//     .s1_index           (s1_index),      
-//     .s1_pfn             (s1_pfn),     
-//     .s1_c               (s1_c),     
-//     .s1_d               (s1_d),     
-//     .s1_v               (s1_v), 
-//     // write port     
-//     .we                 (we),         
-//     .w_index            (w_index),     
-//     .w_vpn2             (w_vpn2),     
-//     .w_asid             (w_asid),     
-//     .w_g                (w_g),     
-//     .w_pfn0             (w_pfn0),     
-//     .w_c0               (w_c0),     
-//     .w_d0               (w_d0),
-//     .w_v0               (w_v0),     
-//     .w_pfn1             (w_pfn1),     
-//     .w_c1               (w_c1),     
-//     .w_d1               (w_d1),     
-//     .w_v1               (w_v1), 
-//     // read port 
-//     .r_index            (r_index),     
-//     .r_vpn2             (r_vpn2),     
-//     .r_asid             (r_asid),     
-//     .r_g                (r_g),     
-//     .r_pfn0             (r_pfn0),     
-//     .r_c0               (r_c0),     
-//     .r_d0               (r_d0),     
-//     .r_v0               (r_v0),     
-//     .r_pfn1             (r_pfn1),     
-//     .r_c1               (r_c1),     
-//     .r_d1               (r_d1),     
-//     .r_v1               (r_v1)     
-// );
-
-assign ws_tlb_sign_o    = ws_tlb_sign;
-assign tlb_flush        = ws_valid & ws_tlb_sign;
 
 
 

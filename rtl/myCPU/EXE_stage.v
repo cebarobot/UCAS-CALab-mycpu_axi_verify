@@ -37,28 +37,15 @@ module exe_stage(
     output [`ES_FWD_BLK_BUS_WD -1:0] es_fwd_blk_bus,    
 
     //exception
-    input                           ws_ex        ,
-    input                           ms_ex        ,
-    input                           ms_eret      ,
-    input                           ws_eret      ,
-
+    input   ws_ex   ,
+    input   ws_eret ,
+    input   ms_ex   ,
+    input   ms_eret ,
 
     //tlb
-    output [              18:0] s1_vpn2,     
-    output                      s1_odd_page,     
-    output [               7:0] s1_asid,     
-    input                      s1_found,     
-    input [               3:0] s1_index,      
-    input [              19:0] s1_pfn,     
-    input [               2:0] s1_c,     
-    input                      s1_d,     
-    input                      s1_v,   
-    //lab14
-    input   [31:0]                  cp0_entryhi  ,
-    output                          es_tlb_sign_o,
-    input                           ws_entryhi_block,
-    input                           ms_entryhi_block
-
+    output  es_inst_tlbp,
+    input           s1_found,
+    input   [ 3:0]  s1_index
 );
 
 reg         es_valid      ;
@@ -128,7 +115,7 @@ wire [31:0] ds_to_es_badvaddr;
 
 
 assign {
-    es_tlb_sign    ,  //214:214
+    es_after_tlb    ,  //214:214
     es_inst_tlbp   ,  //213:213
     es_inst_tlbr   ,  //212:212
     es_inst_tlbwi  ,  //211:211
@@ -211,7 +198,7 @@ assign es_exe_result =
 assign es_to_ms_bus = {
     s1_index        ,  //171:168
     s1_found        ,  //167:167
-    es_tlb_sign     ,  //166:166
+    es_after_tlb     ,  //166:166
     es_inst_tlbp    ,  //165:165
     es_inst_tlbr    ,  //164:164
     es_inst_tlbwi   ,  //163:163
@@ -622,37 +609,5 @@ assign es_excode = (ds_to_es_ex)? ds_to_es_excode :
                     (load_ex)? `EX_ADEL :
                     (store_ex)? `EX_ADES :
                     ds_to_es_excode;
-
-//lab14-tlb-block
-assign es_tlb_sign_o = es_tlb_sign;
-
-wire [31:0] vaddr;
-
-wire unmapped;
-assign unmapped = vaddr[31] & !vaddr[30];
-
-//wire        s1_vpn2;
-assign s1_vpn2 = (es_inst_tlbp)? cp0_entryhi[31:13] : vaddr[31:13];
-
-//wire        s1_odd_page;
-assign s1_odd_page = vaddr[12];
-
-//wire [7:0]  s1_asid;
-assign s1_asid = cp0_entryhi[7:0];
-
-//wire        s1_found;          
-//wire [3:0]  s1_index;
-//wire [19:0] s1_pfn;
-//wire [2:0]  s1_c;
-//wire        s1_d;
-//wire        s1_v;
-
-
-wire [31:0] paddr;
-assign paddr = (unmapped)? vaddr : {s1_pfn, vaddr[11:0]};
-
-
-
-
 
 endmodule

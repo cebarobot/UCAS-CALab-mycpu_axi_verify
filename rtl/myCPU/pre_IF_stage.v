@@ -24,9 +24,11 @@ module pre_if_stage(        // instruction require stage
     input           inst_sram_data_ok,
     output          pfs_inst_waiting, 
 
-    // exception
+    // exception & tlb handle
     input           ws_eret,
     input           ws_ex,
+    input           ws_after_tlb,
+    input   [31:0]  after_tlb_pc,
     input   [31:0]  cp0_epc
 );
 
@@ -121,7 +123,11 @@ always @ (posedge clk) begin
     if (reset) begin
         seq_pc <= 32'h_bfc00000;
     end else if (ws_ex) begin
-        seq_pc <= `EX_ENTRY;
+        if (ws_after_tlb) begin
+            seq_pc <= after_tlb_pc;
+        end else begin
+            seq_pc <= `EX_ENTRY;
+        end
     end else if (ws_eret) begin
         seq_pc <= cp0_epc;
     end else if (pfs_ready_go && fs_allowin) begin

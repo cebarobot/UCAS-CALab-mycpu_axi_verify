@@ -33,10 +33,9 @@ module id_stage(
     input                           ws_ex         ,
 
     input  [31:0]                   cp0_status    ,
-    input  [31:0]                   cp0_cause     ,
+    input  [31:0]                   cp0_cause     
 
     //lab13-tlbex
-    output                          ds_tlb_sign_o   
 );
 
 reg         ds_valid   ;
@@ -49,10 +48,10 @@ wire [31:0] ds_inst;
 wire [31:0] ds_pc  ;
 wire [31:0] bd_pc;
 wire        ds_ex;
+wire        ds_after_tlb;
 wire [31:0] ds_badvaddr;
 wire [ 4:0] ds_excode;
 assign {
-    ds_tlb_sign,
     fs_to_ds_ex,
     ds_badvaddr,
     ds_inst,
@@ -199,10 +198,19 @@ wire        inst_sh;
 wire        inst_swl;
 wire        inst_swr;
 
+wire        inst_syscall;
+wire        inst_eret;
+wire        inst_mfc0;
+wire        inst_mtc0;
+wire        inst_break;
+
 //tlb in lab14
 wire        inst_tlbp;
 wire        inst_tlbr;
-wire        inst_tlbwi;      
+wire        inst_tlbwi;
+
+wire        inst_mtc0_entryhi;
+wire        affect_tlb;
 
 wire        dst_is_r31;  
 wire        dst_is_rt;   
@@ -229,7 +237,7 @@ assign br_bus = {
 };
 
 assign ds_to_es_bus = {
-    ds_tlb_sign ,  //214:214
+    ds_after_tlb,  //214:214
     inst_tlbp   ,  //213:213
     inst_tlbr   ,  //212:212
     inst_tlbwi  ,  //211:211
@@ -409,6 +417,8 @@ assign inst_tlbp    = op_d[6'h10] & (ds_inst[25] == 1'b1) & (ds_inst[24:6] == 19
 assign inst_tlbr    = op_d[6'h10] & (ds_inst[25] == 1'b1) & (ds_inst[24:6] == 19'b0) & func_d[6'h01];
 assign inst_tlbwi   = op_d[6'h10] & (ds_inst[25] == 1'b1) & (ds_inst[24:6] == 19'b0) & func_d[6'h02];
 
+assign inst_mtc0_entryhi = inst_mtc0 && cp0_addr == `CP0_ENTRYHI_ADDR;
+assign affect_tlb = inst_tlbr || inst_tlbwi || inst_mtc0_entryhi;
 
 assign alu_op[ 0] = inst_add | inst_addi | inst_addu | inst_addiu | inst_lw | inst_sw | inst_jal | inst_bltzal |
                     inst_bgezal | inst_jalr | inst_lb | inst_lbu |inst_lh | inst_lhu | inst_lwl | inst_lwr | inst_sb |
@@ -571,7 +581,7 @@ wire interrupt;
 assign interrupt = ((cp0_cause[15:8] & cp0_status[15:8]) != 8'b0) && (cp0_status[1:0] == 2'b01);
 
 
-assign ds_ex = (fs_to_ds_ex | inst_syscall | inst_break | other_inst | interrupt) & ds_valid;
+assign ds_ex = (fs_to_ds_ex | inst_syscall | inst_break | other_inst | interrupt | ds_after_tlb) & ds_valid;
 
 assign ds_excode = (interrupt) ? `EX_INT :
                    (fs_to_ds_ex) ? `EX_ADEL :
@@ -580,6 +590,18 @@ assign ds_excode = (interrupt) ? `EX_INT :
                    (inst_break) ? `EX_BP : `EX_NO;
 
 //lab14
-assign ds_tlb_sign_o = inst_tlbr | inst_tlbwi;
+reg  ds_after_tlb_r;
+assign ds_after_tlb = ds_after_tlb_r;
+
+always @ (posedge clk) begin
+    if (reset) begin
+        ds_after_tlb_r <= 1'b0;
+    end else if (ws_eret || ws_ex) begin
+        ds_after_tlb_r <= 1'b0;
+    end else if (affect_tlb && es_allowin && ds_to_es_valid) begin
+        ds_after_tlb_r <= 1'b1;
+    end
+end
+
 
 endmodule

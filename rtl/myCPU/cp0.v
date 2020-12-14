@@ -1,15 +1,4 @@
-`define CP0_BADV_ADDR       8'b01000000
-`define CP0_COUNT_ADDR      8'b01001000
-`define CP0_COMP_ADDR       8'b01011000
-`define CP0_STATUS_ADDR     8'b01100000
-`define CP0_CAUSE_ADDR      8'b01101000
-`define CP0_EPC_ADDR        8'b01110000
-`define CP0_CONFIG_ADDR     8'b10000000
-
-`define CP0_ENTRYHI_ADDR    8'b01010000
-`define CP0_ENTRYLO0_ADDR   8'b00010000
-`define CP0_ENTRYLO1_ADDR   8'b00011000
-`define CP0_INDEX_ADDR      8'b00000000
+`include "mycpu.h"
 
 module cp0(
     input         clk,
