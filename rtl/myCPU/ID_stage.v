@@ -456,7 +456,7 @@ assign dst_is_rt    = inst_addi | inst_addiu | inst_slti | inst_sltiu | inst_lui
 assign gr_we        = ~inst_sw & ~inst_beq & ~inst_bne & ~inst_jr & 
                       ~inst_mtlo & ~inst_mthi & ~inst_div & ~inst_divu & ~inst_mult & ~inst_multu &
                       ~inst_bgez & ~inst_bgtz & ~inst_blez & ~inst_bltz & ~inst_j & ~inst_sb & ~inst_sh & ~inst_swl & ~inst_swr &
-                      ~inst_mtc0 & ~inst_syscall & ~inst_eret & ~inst_break & ~inst_tlbp & ~inst_tlbr & inst_tlbwi;
+                      ~inst_mtc0 & ~inst_syscall & ~inst_eret & ~inst_break & ~inst_tlbp & ~inst_tlbr & ~inst_tlbwi;
 assign mem_we       = inst_sw | inst_sh | inst_sb | inst_swl | inst_swr;
 assign mem_re       = inst_lw | inst_lh | inst_lhu | inst_lb | inst_lbu | inst_lwl | inst_lwr;
 

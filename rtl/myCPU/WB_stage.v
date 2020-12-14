@@ -198,7 +198,7 @@ wire [31:0] cp0_index;
 // wire                       w_d1;     
 // wire                       w_v1;
 
-assign we           = ws_tlbwi;
+assign we           = ws_inst_tlbwi;
 // ENTRYHI
 assign w_index      = cp0_index[3:0];
 assign w_vpn2       = cp0_entryhi[31:13];
@@ -261,9 +261,9 @@ cp0 u_cp0(
     .cp0_entrylo1       (cp0_entrylo1),
     .cp0_index          (cp0_index),
       
-    .tlbp               (ws_tlbp),
-    .tlbr               (ws_tlbr),
-    .tlbwi              (ws_tlbwi),
+    .tlbp               (ws_inst_tlbp),
+    .tlbr               (ws_inst_tlbr),
+    .tlbwi              (ws_inst_tlbwi),
 
     .s1_found           (ws_s1_found),
     .s1_index           (ws_s1_index),

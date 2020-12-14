@@ -192,7 +192,7 @@ end
 
 endmodule
 
-module pvaddr_transfer (
+module vpaddr_transfer (
     input   [31:0]  vaddr,
     output  [31:0]  paddr,
     output          tlb_error,
