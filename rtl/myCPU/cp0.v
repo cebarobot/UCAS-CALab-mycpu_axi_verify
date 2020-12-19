@@ -164,8 +164,10 @@ assign cp0_epc = c0_epc;
 
 //BADVADDR
 reg [31:0] c0_badvaddr;
+wire excode_tlb;
+assign excode_tlb = (wb_excode == 5'h01) || (wb_excode == 5'h02) || (wb_excode == 5'h03);
 always @(posedge clk) begin
-    if(wb_ex && ((wb_excode == 5'h04) || (wb_excode == 5'h05)))
+    if(wb_ex && ((wb_excode == 5'h04) || (wb_excode == 5'h05) || excode_tlb))
         c0_badvaddr <= wb_badvaddr;
 end
 
@@ -218,7 +220,9 @@ assign cp0_rdata =
 //ENTRYHI
 reg [18:0] entry_hi_vpn2;
 always @(posedge clk) begin
-    if(mtc0_we && cp0_addr == `CP0_ENTRYHI_ADDR)
+    if(wb_ex && excode_tlb)
+        entry_hi_vpn2 <= wb_pc[31:13];
+    else if(mtc0_we && cp0_addr == `CP0_ENTRYHI_ADDR)
         entry_hi_vpn2 <= cp0_wdata[31:13];
     else if(tlbr)
         entry_hi_vpn2 <= r_vpn2;

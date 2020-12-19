@@ -19,15 +19,10 @@ module wb_stage(
     //block
     output          ws_inst_mfc0_o,
     output [4:0]    ws_rf_dest    ,
-    //exception
-    output          ws_ex_o       ,
-    output          ws_eret       ,
-    output          ws_after_tlb  ,
-    output [31:0]   cp0_epc       ,
-    output [31:0]   after_tlb_pc  ,
-    output [31:0]   cp0_status    ,
-    output [31:0]   cp0_cause     ,
-    output [31:0]   cp0_entryhi   ,
+    // cp0
+    output [31:0]   cp0_status,
+    output [31:0]   cp0_cause,
+    output [31:0]   cp0_entryhi,
 
     //lab14
 
@@ -58,8 +53,12 @@ module wb_stage(
     input  [              19:0] r_pfn1,     
     input  [               2:0] r_c1,     
     input                       r_d1,     
-    input                       r_v1
-    
+    input                       r_v1,
+
+    // exception handle
+    output          ws_ex,
+    output          ws_do_flush,
+    output  [31:0]  ws_flush_pc
 );
 
 reg         ws_valid;
@@ -71,29 +70,32 @@ wire [ 4:0] ws_dest;
 wire [31:0] ws_final_result;
 wire [31:0] ws_pc;
 
-wire        ws_ex;
+wire        ms_to_ws_ex;
 wire        ws_bd;
 wire        ws_inst_eret;
 wire        ws_inst_syscall;  
 wire        ws_inst_mtc0;
-wire [7:0]  cp0_addr;
-wire [4:0]  ws_excode;
+wire [ 7:0] cp0_addr;
+wire [ 4:0] ws_excode;
 wire [31:0] ws_badvaddr;
 
-wire [3:0] ws_s1_index;
-wire       ws_s1_found;  
+wire [ 3:0] ws_s1_index;
+wire        ws_s1_found;  
+
+wire        ws_tlb_refill;
 
 assign {
+    ws_tlb_refill   ,  //133:133
     ws_s1_index     ,  //132:129
     ws_s1_found     ,  //128:128
     ws_after_tlb    ,  //127:127
     ws_inst_tlbp    ,  //126:126
     ws_inst_tlbr    ,  //125:125
     ws_inst_tlbwi   ,  //124:124
-    ws_excode       ,  //123:119
-    ws_badvaddr     ,  //118:87
+    ms_to_ws_excode ,  //123:119
+    ms_to_ws_badvaddr, //118:87
     cp0_addr        ,  //86:79
-    ws_ex           ,  //78:78
+    ms_to_ws_ex     ,  //78:78
     ws_bd           ,  //77:77
     ws_inst_eret    ,  //76:76
     ws_inst_syscall ,  //75:75
@@ -131,15 +133,11 @@ always @(posedge clk) begin
     end
 end
 
-
 //lab8
-
-
 wire [5:0]      ext_int_in;
 wire [31:0]     cp0_rdata;
 wire            cp0_we;
 wire [31:0]     cp0_wdata;
-
 
 wire [31:0]     ws_cp0_epc;
 wire [31:0]     ws_cp0_status;
@@ -149,17 +147,28 @@ wire [31:0]     ws_cp0_cause;
 assign ws_inst_mfc0_o = ws_valid && ws_inst_mfc0;
 assign ws_rf_dest = ws_valid ? ws_dest : 5'b0;
 
-assign ws_ex_o = ws_valid && ws_ex;
-assign cp0_epc = {32{ws_valid}} & ws_cp0_epc;
-assign cp0_cause = {32{ws_valid}} & ws_cp0_cause;
-assign cp0_status = {32{ws_valid}} & ws_cp0_status;
+assign ws_ex        = ws_valid && ms_to_ws_ex;
+assign ws_eret      = ws_valid && ws_inst_eret;
+assign ws_excode    = ms_to_ws_excode;
+assign ws_badvaddr  = ms_to_ws_badvaddr;
 
+assign ws_do_flush = ws_ex;
+assign ws_flush_pc = 
+    ws_after_tlb    ? ws_pc :
+    ws_inst_eret    ? cp0_epc :
+    ws_tlb_refill   ? `EX_TLB_REFILL_ENTRY :
+    `EX_ENTRY;
+
+// assign cp0_epc = {32{ws_valid}} & ws_cp0_epc;
+// assign cp0_cause = {32{ws_valid}} & ws_cp0_cause;
+// assign cp0_status = {32{ws_valid}} & ws_cp0_status;
+assign cp0_epc      = ws_cp0_epc;
+assign cp0_cause    = ws_cp0_cause;
+assign cp0_status   = ws_cp0_status;
 
 //init
 assign ext_int_in = 6'b0;
-assign ws_eret = ws_inst_eret && ws_valid;
 
-assign after_tlb_pc = ws_pc;
 
 // TODO
 assign rf_we    = {4{ ws_valid & ~ws_ex }} & ws_gr_strb;
@@ -238,7 +247,7 @@ cp0 u_cp0(
     .clk                (clk),
     .rst                (reset),
     
-    .wb_ex              (ws_ex && !ws_after_tlb),
+    .wb_ex              (ws_ex && !ws_inst_eret && !ws_after_tlb),
     .wb_bd              (ws_bd),
     .wb_excode          (ws_excode),
     .wb_pc              (ws_pc),

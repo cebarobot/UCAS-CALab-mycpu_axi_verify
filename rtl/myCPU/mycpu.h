@@ -3,16 +3,19 @@
 
     `define BR_BUS_WD           35
 
-    `define PFS_TO_FS_BUS_WD    65
-    `define FS_TO_DS_BUS_WD     97
-    `define DS_TO_ES_BUS_WD     215
-    `define ES_TO_MS_BUS_WD     172
-    `define MS_TO_WS_BUS_WD     133
+    `define PFS_TO_FS_BUS_WD    104
+    `define FS_TO_DS_BUS_WD     103
+    `define DS_TO_ES_BUS_WD     216
+    `define ES_TO_MS_BUS_WD     173
+    `define MS_TO_WS_BUS_WD     134
     `define WS_TO_RF_BUS_WD     41
     `define ES_FWD_BLK_BUS_WD   42
     `define MS_FWD_BLK_BUS_WD   42
 
     `define EX_INT              5'h00
+    `define EX_MOD              5'h01
+    `define EX_TLBL             5'h02
+    `define EX_TLBS             5'h03
     `define EX_ADEL             5'h04
     `define EX_ADES             5'h05
     `define EX_SYS              5'h08
@@ -22,6 +25,7 @@
     `define EX_NO               5'h1f
 
     `define EX_ENTRY            32'h_bfc00380
+    `define EX_TLB_REFILL_ENTRY 32'h_bfc00200
 
     `define CP0_BADV_ADDR       8'b01000000
     `define CP0_COUNT_ADDR      8'b01001000

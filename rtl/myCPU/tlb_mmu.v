@@ -195,7 +195,6 @@ endmodule
 module vpaddr_transfer (
     input   [31:0]  vaddr,
     output  [31:0]  paddr,
-    output          tlb_error,
     output          tlb_refill,
     output          tlb_invalid,
     output          tlb_modified,
@@ -207,7 +206,6 @@ module vpaddr_transfer (
     output          tlb_odd_page,
     output  [ 7:0]  tlb_asid,
     input           tlb_found,
-    input   [ 3:0]  tlb_index,      // TODO need to be removed
     input   [19:0]  tlb_pfn,
     input   [ 2:0]  tlb_c,
     input           tlb_d,
@@ -215,17 +213,18 @@ module vpaddr_transfer (
 );
 
 wire unmapped;
-assign unmapped = vaddr[31] & !vaddr[30];
+// assign unmapped = vaddr[31] & !vaddr[30];
+assign unmapped = 1'b1;
 
 assign tlb_vpn2 = (inst_tlbp)? cp0_entryhi[31:13] : vaddr[31:13];
 assign tlb_odd_page = vaddr[12];
 assign tlb_asid = cp0_entryhi[7:0];
 
-assign paddr = (unmapped)? {3'b0, vaddr[28:0]} : {tlb_pfn, vaddr[11:0]};
+// assign paddr = (unmapped)? {3'b0, vaddr[28:0]} : {tlb_pfn, vaddr[11:0]};
+assign paddr = vaddr;
 
-assign tlb_error = 1'b0;
-assign tlb_refill = 1'b0;
-assign tlb_invalid = 1'b0;
-assign tlb_modified = 1'b0;
+assign tlb_refill   = !unmapped && !tlb_found;
+assign tlb_invalid  = !unmapped && tlb_found && !tlb_v;
+assign tlb_modified = !unmapped && tlb_found && tlb_v && !tlb_d;
 
 endmodule

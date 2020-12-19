@@ -23,19 +23,19 @@ module id_stage(
     input  [`MS_FWD_BLK_BUS_WD -1:0] ms_fwd_blk_bus, 
 
     //block
-    input                           es_inst_mfc0  ,
-    input                           ms_inst_mfc0  ,
-    input                           ws_inst_mfc0  ,
-    input [4:0]                     ws_rf_dest    ,
+    input           es_inst_mfc0,
+    input           ms_inst_mfc0,
+    input           ws_inst_mfc0,
+    input   [ 4:0]  ws_rf_dest,
 
-    //exception
-    input                           ws_eret    ,
-    input                           ws_ex         ,
-
-    input  [31:0]                   cp0_status    ,
-    input  [31:0]                   cp0_cause     
-
-    //lab13-tlbex
+    // cp0
+    input   [31:0]  cp0_status,
+    input   [31:0]  cp0_cause,
+    
+    // exception handle
+    output          ds_ex,
+    input           after_ex,
+    input           do_flush
 );
 
 reg         ds_valid   ;
@@ -43,17 +43,25 @@ wire        ds_ready_go;
 
 reg  [`FS_TO_DS_BUS_WD -1:0] fs_to_ds_bus_r;
 
+wire        fs_to_ds_ex;
 wire [31:0] fs_to_ds_badvaddr;
+wire [ 4:0] fs_to_ds_excode;
+
 wire [31:0] ds_inst;
 wire [31:0] ds_pc  ;
 wire [31:0] bd_pc;
-wire        ds_ex;
-wire        ds_after_tlb;
+
 wire [31:0] ds_badvaddr;
 wire [ 4:0] ds_excode;
+
+wire        ds_after_tlb;
+wire        ds_tlb_refill;
+
 assign {
+    ds_tlb_refill,
+    fs_to_ds_excode,
     fs_to_ds_ex,
-    ds_badvaddr,
+    fs_to_ds_badvaddr,
     ds_inst,
     ds_pc
 } = fs_to_ds_bus_r;
@@ -237,6 +245,7 @@ assign br_bus = {
 };
 
 assign ds_to_es_bus = {
+    ds_tlb_refill, //215:215
     ds_after_tlb,  //214:214
     inst_tlbp   ,  //213:213
     inst_tlbr   ,  //212:212
@@ -299,11 +308,11 @@ assign ds_ready_go    = !(
 );
 
 assign ds_allowin     = !ds_valid || ds_ready_go && es_allowin;
-assign ds_to_es_valid = ds_valid && ds_ready_go && !ws_eret && !ws_ex;
+assign ds_to_es_valid = ds_valid && ds_ready_go && !do_flush;
 always @(posedge clk) begin
     if (reset) begin
         ds_valid <= 1'b0;
-    end else if (ws_ex || ws_eret) begin
+    end else if (do_flush) begin
         ds_valid <= 1'b0;
     end else if (ds_allowin) begin
         ds_valid <= fs_to_ds_valid;
@@ -530,7 +539,7 @@ assign ds_is_bd = ds_valid && ds_is_bd_r;
 always @ (posedge clk) begin
     if (reset) begin
         ds_is_bd_r <= 1'b0;
-    end else if (ws_eret || ws_ex) begin
+    end else if (do_flush) begin
         ds_is_bd_r <= 1'b0;
     end else if (ds_to_es_valid && es_allowin) begin
         ds_is_bd_r <= ds_is_branch;
@@ -581,13 +590,18 @@ wire interrupt;
 assign interrupt = ((cp0_cause[15:8] & cp0_status[15:8]) != 8'b0) && (cp0_status[1:0] == 2'b01);
 
 
-assign ds_ex = (fs_to_ds_ex | inst_syscall | inst_break | other_inst | interrupt | ds_after_tlb) & ds_valid;
-
-assign ds_excode = (interrupt) ? `EX_INT :
-                   (fs_to_ds_ex) ? `EX_ADEL :
-                   (other_inst) ? `EX_RI :
-                   (inst_syscall) ? `EX_SYS :
-                   (inst_break) ? `EX_BP : `EX_NO;
+assign ds_ex = ds_valid && (
+    fs_to_ds_ex || inst_syscall || inst_break || other_inst || interrupt || 
+    ds_after_tlb || inst_eret
+);
+assign ds_excode = 
+    interrupt       ? `EX_INT :
+    fs_to_ds_ex     ? fs_to_ds_excode :
+    other_inst      ? `EX_RI :
+    inst_syscall    ? `EX_SYS :
+    inst_break      ? `EX_BP :
+    `EX_NO;
+assign ds_badvaddr = fs_to_ds_badvaddr;
 
 //lab14
 reg  ds_after_tlb_r;
@@ -596,7 +610,7 @@ assign ds_after_tlb = ds_after_tlb_r;
 always @ (posedge clk) begin
     if (reset) begin
         ds_after_tlb_r <= 1'b0;
-    end else if (ws_eret || ws_ex) begin
+    end else if (do_flush) begin
         ds_after_tlb_r <= 1'b0;
     end else if (affect_tlb && es_allowin && ds_to_es_valid) begin
         ds_after_tlb_r <= 1'b1;

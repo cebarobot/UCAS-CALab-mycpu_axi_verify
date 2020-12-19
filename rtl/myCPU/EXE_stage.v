@@ -36,16 +36,19 @@ module exe_stage(
     // forword & block from es
     output [`ES_FWD_BLK_BUS_WD -1:0] es_fwd_blk_bus,    
 
-    //exception
-    input   ws_ex   ,
-    input   ws_eret ,
-    input   ms_ex   ,
-    input   ms_eret ,
-
     //tlb
-    output  es_inst_tlbp,
+    output          es_inst_tlbp,
     input           s1_found,
-    input   [ 3:0]  s1_index
+    input   [ 3:0]  s1_index,
+    // tlb exception report
+    input           tlb_refill,
+    input           tlb_invalid,
+    input           tlb_modified,
+
+    // exception handle
+    output          es_ex,
+    input           after_ex,
+    input           do_flush
 );
 
 reg         es_valid      ;
@@ -100,29 +103,32 @@ wire [31:0] es_pc         ;
 wire [4:0] es_excode;
 wire [31:0] es_badvaddr;
 
-wire    es_ex;
 wire    es_bd;
 wire    es_inst_eret;
 wire    es_inst_syscall;  
 wire    es_inst_mfc0;
 wire    es_inst_mtc0;
-wire    no_store;  
-assign no_store = ms_ex | ws_ex | es_ex | ms_eret | ws_eret;
-// assign no_store = ms_ex | ws_ex | es_ex;
+wire    no_store;
+
+assign no_store = es_ex || after_ex;
 
 wire [4:0] ds_to_es_excode;
 wire [31:0] ds_to_es_badvaddr;
 
+wire        es_after_tlb;
+wire        ds_tlb_refill;
+wire        es_tlb_refill;
 
 assign {
-    es_after_tlb    ,  //214:214
+    ds_tlb_refill  ,  //215:215
+    es_after_tlb   ,  //214:214
     es_inst_tlbp   ,  //213:213
     es_inst_tlbr   ,  //212:212
     es_inst_tlbwi  ,  //211:211
-    fs_to_ds_ex  ,    //210:210
-    overflow_inst,    //209:209
+    fs_to_ds_ex    ,  //210:210
+    overflow_inst  ,  //209:209
     ds_to_es_excode,  //208:204
-    ds_to_es_badvaddr, //203:172
+    ds_to_es_badvaddr,//203:172
     es_cp0_addr    ,  //171:164
     ds_to_es_ex    ,  //163:163
     ds_to_es_bd    ,  //162:162
@@ -196,9 +202,10 @@ assign es_exe_result =
     es_alu_result;
 
 assign es_to_ms_bus = {
+    es_tlb_refill   ,  //172:172
     s1_index        ,  //171:168
     s1_found        ,  //167:167
-    es_after_tlb     ,  //166:166
+    es_after_tlb    ,  //166:166
     es_inst_tlbp    ,  //165:165
     es_inst_tlbr    ,  //164:164
     es_inst_tlbwi   ,  //163:163
@@ -562,20 +569,20 @@ assign es_fwd_valid = {4{ es_valid && es_gr_we && !es_res_from_mem }};
 assign es_rf_dest   = es_dest;
 assign es_rf_data   = es_exe_result;
 
-assign es_blk_valid = es_valid && es_res_from_mem && !ws_eret && !ws_ex;
+assign es_blk_valid = es_valid && es_res_from_mem && !do_flush;
 
 // Pipeline
 assign es_ready_go    = 
-    (es_inst_div  && !ws_eret && !ws_ex) ? signed_dout_tvalid || signed_divider_done :
-    (es_inst_divu && !ws_eret && !ws_ex) ? unsigned_dout_tvalid || unsigned_divider_done :
-    (es_mem_we || es_mem_re            ) ? es_addr_ok || es_ex:
+    (es_inst_div  && !do_flush  ) ? signed_dout_tvalid || signed_divider_done :
+    (es_inst_divu && !do_flush  ) ? unsigned_dout_tvalid || unsigned_divider_done :
+    (es_mem_we || es_mem_re     ) ? es_addr_ok || es_ex:
     1'b1;
 assign es_allowin     = !es_valid || es_ready_go && ms_allowin;
-assign es_to_ms_valid =  es_valid && es_ready_go && !ws_eret && !ws_ex;
+assign es_to_ms_valid =  es_valid && es_ready_go && !do_flush;
 always @(posedge clk) begin
     if (reset) begin
         es_valid <= 1'b0;
-    end else if (ws_ex || ws_eret) begin
+    end else if (do_flush) begin
         es_valid <= 1'b0;
     end else if (es_allowin) begin
         es_valid <= ds_to_es_valid;
@@ -589,25 +596,40 @@ end
 assign es_inst_mfc0_o = es_valid && es_inst_mfc0;
 
 wire overflow_ex;
-wire mem_ex;
-
 wire load_ex;
 wire store_ex;
+wire tlb_load_ex;
+wire tlb_store_ex;
+wire tlb_mod_ex;
 
 assign overflow_ex = overflow && overflow_inst;
 
-assign load_ex = (es_inst_lw && (st_addr != 2'b00)) || ((es_inst_lh || es_inst_lhu) && (st_addr[0] != 1'b0));
-assign store_ex = (es_inst_sw && (st_addr != 2'b00)) || (es_inst_sh && (st_addr[0] != 1'b0));
-assign mem_ex = load_ex || store_ex;
+assign load_ex = 
+    (es_inst_lw && (st_addr != 2'b00)) || ((es_inst_lh || es_inst_lhu) && (st_addr[0] != 1'b0));
+assign store_ex = 
+    (es_inst_sw && (st_addr != 2'b00)) || (es_inst_sh && (st_addr[0] != 1'b0));
+assign tlb_load_ex = 
+    (tlb_refill || tlb_invalid) && es_mem_re;
+assign tlb_store_ex =
+    (tlb_refill || tlb_invalid) && es_mem_we;
+assign tlb_mod_ex = 
+    tlb_modified && es_mem_we;
 
+assign es_ex = es_valid && (ds_to_es_ex || overflow_ex || load_ex || store_ex);
+// assign es_badvaddr = (fs_to_ds_ex) ? ds_to_es_badvaddr : es_alu_result;
+assign es_excode = 
+    ds_to_es_ex ? ds_to_es_excode :
+    overflow_ex ? `EX_OV :
+    load_ex     ? `EX_ADEL :
+    store_ex    ? `EX_ADES :
+    tlb_load_ex ? `EX_TLBL :
+    tlb_store_ex? `EX_TLBS :
+    tlb_mod_ex  ? `EX_MOD:
+    ds_to_es_excode;
+assign es_badvaddr = 
+    (ds_to_es_excode == `EX_ADEL || ds_to_es_excode == `EX_TLBL) ? ds_to_es_badvaddr : data_sram_addr;
 
-assign es_ex = (overflow_ex | mem_ex | ds_to_es_ex) & es_valid;
+assign es_tlb_refill = ds_tlb_refill || tlb_refill;
 assign es_bd = ds_to_es_bd;
-assign es_badvaddr = (fs_to_ds_ex) ? ds_to_es_badvaddr : es_alu_result;
-assign es_excode = (ds_to_es_ex)? ds_to_es_excode :
-                    (overflow_ex)? `EX_OV :
-                    (load_ex)? `EX_ADEL :
-                    (store_ex)? `EX_ADES :
-                    ds_to_es_excode;
 
 endmodule

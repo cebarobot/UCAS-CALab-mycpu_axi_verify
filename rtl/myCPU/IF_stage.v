@@ -22,10 +22,10 @@ module if_stage(
     input           inst_sram_data_ok,
     output          fs_inst_waiting, 
 
-    //exception
-    input           ws_eret,
-    input           ws_ex,
-    input [31:0]    cp0_epc
+    // exception handle
+    output          fs_ex,
+    input           after_ex,
+    input           do_flush
 );
 
 reg         fs_valid;
@@ -34,15 +34,22 @@ reg  [`PFS_TO_FS_BUS_WD -1:0] pfs_to_fs_bus_r;
 
 wire        pfs_to_fs_inst_ok;
 wire [31:0] pfs_to_fs_inst;
+wire [ 4:0] pfs_to_fs_excode;
+wire [31:0] pfs_to_fs_badvaddr;
+wire        pfs_to_fs_ex;
 wire [31:0] fs_pc;
 assign {
+    fs_tlb_refill,
     pfs_to_fs_inst_ok,
     pfs_to_fs_inst,
+    pfs_to_fs_excode,
+    pfs_to_fs_badvaddr,
+    pfs_to_fs_ex,
     fs_pc
 } = pfs_to_fs_bus_r;
 
-wire fs_ex;
 wire [31:0] fs_badvaddr;
+wire [ 4:0] fs_excode;
 
 // ram
 reg         fs_inst_buff_valid;
@@ -51,21 +58,23 @@ wire        fs_inst_ok;
 wire [31:0] fs_inst;
 
 assign fs_to_ds_bus = {
-    fs_ex,       //96:96
-    fs_badvaddr, //95:64  
-    fs_inst,     //63:32
-    fs_pc        //31:0
+    fs_tlb_refill,  //102
+    fs_excode,      //101:97
+    fs_ex,          //96:96
+    fs_badvaddr,    //95:64  
+    fs_inst,        //63:32
+    fs_pc           //31:0
 };
 
 
 // IF stage
-assign fs_ready_go    = fs_inst_ok;
+assign fs_ready_go    = fs_inst_ok || fs_ex;
 assign fs_allowin     = !fs_valid || fs_ready_go && ds_allowin;
-assign fs_to_ds_valid =  fs_valid && fs_ready_go && !ws_eret && !ws_ex;
+assign fs_to_ds_valid =  fs_valid && fs_ready_go && !do_flush;
 always @(posedge clk) begin
     if (reset) begin
         fs_valid <= 1'b0;
-    end else if (ws_ex || ws_eret) begin
+    end else if (do_flush) begin
         fs_valid <= 1'b0;
     end else if (fs_allowin) begin
         fs_valid <= pfs_to_fs_valid;
@@ -81,10 +90,13 @@ always @ (posedge clk) begin
     if (reset) begin
         fs_inst_buff_valid  <= 1'b0;
         fs_inst_buff        <= 32'h0;
+    end else if (do_flush) begin
+        fs_inst_buff_valid  <= 1'b0;
+        fs_inst_buff        <= 32'h0;
     end else if (!fs_inst_buff_valid && fs_valid && inst_sram_data_ok && !ds_allowin) begin
         fs_inst_buff_valid  <= 1'b1;
         fs_inst_buff        <= inst_sram_rdata;
-    end else if (ds_allowin || ws_eret || ws_ex) begin
+    end else if (ds_allowin) begin
         fs_inst_buff_valid  <= 1'b0;
         fs_inst_buff        <= 32'h0;
     end
@@ -102,10 +114,10 @@ assign fs_inst_waiting  = fs_valid && !fs_inst_ok;
 assign fs_inst_unable   = !fs_valid || fs_inst_buff_valid || pfs_to_fs_inst_ok;
 
 // lab9
-// instruction fetch exceptions are handled here
-wire addr_error;
-assign addr_error = (fs_pc[1:0] != 2'b0);
-assign fs_ex = fs_valid && addr_error;
-assign fs_badvaddr = fs_pc;
+// exceptions
+
+assign fs_ex        = fs_valid && pfs_to_fs_ex;
+assign fs_excode    = pfs_to_fs_excode;
+assign fs_badvaddr  = pfs_to_fs_badvaddr;
 
 endmodule

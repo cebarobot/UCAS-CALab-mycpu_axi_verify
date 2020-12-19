@@ -27,16 +27,10 @@ module mem_stage(
     //block
     output                          ms_inst_mfc0_o ,
 
-
-    //exception
-    input                           ws_ex        ,
-    input                           ws_eret      ,
-    output                          ms_ex_o      ,
-    output                          ms_eret      ,
-
-    //lab14
-    output                          ms_entryhi_block
-    
+    // exception handle
+    output          ms_ex,
+    input           after_ex,
+    input           do_flush
 );
 
 reg         ms_valid;
@@ -63,16 +57,16 @@ wire [31:0] ms_pc;
 wire [7:0]  ms_cp0_addr;
 
 
-wire [4:0] ms_excode;
+wire [ 4:0] ms_excode;
 wire [31:0] ms_badvaddr;
 
-wire [4:0] es_to_ms_excode;
+wire        es_to_ms_ex;
+wire [ 4:0] es_to_ms_excode;
 wire [31:0] es_to_ms_badvaddr;
 
 assign ms_excode = es_to_ms_excode;
 assign ms_badvaddr = es_to_ms_badvaddr;
 
-wire    ms_ex;
 wire    ms_bd;
 wire    ms_inst_eret;
 wire    ms_inst_syscall;
@@ -89,12 +83,16 @@ wire [31:0] ms_data;
 wire        es_to_ms_data_ok;
 wire [31:0] es_to_ms_data;
 
-wire [3:0] ms_s1_index;
-wire       ms_s1_found;  
+wire [ 3:0] ms_s1_index;
+wire        ms_s1_found;  
+
+wire        ms_tlb_refill;
+
 assign {
-    ms_s1_index        ,  //171:168
-    ms_s1_found        ,  //167:167
-    ms_after_tlb     ,  //166:166
+    ms_tlb_refill   ,  //172:172
+    ms_s1_index     ,  //171:168
+    ms_s1_found     ,  //167:167
+    ms_after_tlb    ,  //166:166
     ms_inst_tlbp    ,  //165:165
     ms_inst_tlbr    ,  //164:164
     ms_inst_tlbwi   ,  //163:163
@@ -103,7 +101,7 @@ assign {
     es_to_ms_excode ,  //129:125
     es_to_ms_badvaddr, //124:93
     ms_cp0_addr     ,  //92:85
-    ms_ex           ,  //84:84
+    es_to_ms_ex     ,  //84:84
     ms_bd           ,  //83:83
     ms_inst_eret    ,  //82:82
     ms_inst_syscall ,  //81:81
@@ -129,6 +127,7 @@ wire [ 3:0] ms_gr_strb;
 wire [31:0] ms_final_result;
 
 assign ms_to_ws_bus = {
+    ms_tlb_refill   ,  //133:133
     ms_s1_index     ,  //132:129
     ms_s1_found     ,  //128:128
     ms_after_tlb    ,  //127:127
@@ -164,11 +163,11 @@ assign ms_fwd_blk_bus = {
 
 assign ms_ready_go    = ms_wait_mem ? ms_data_ok : 1'b1;
 assign ms_allowin     = !ms_valid || ms_ready_go && ws_allowin;
-assign ms_to_ws_valid = ms_valid && ms_ready_go && !ws_eret && !ws_ex;
+assign ms_to_ws_valid = ms_valid && ms_ready_go && !do_flush;
 always @(posedge clk) begin
     if (reset) begin
         ms_valid <= 1'b0;
-    end else if (ws_ex || ws_eret) begin
+    end else if (do_flush) begin
         ms_valid <= 1'b0;
     end else if (ms_allowin) begin
         ms_valid <= es_to_ms_valid;
@@ -247,10 +246,13 @@ always @ (posedge clk) begin
     if (reset) begin
         ms_data_buff_valid  <= 1'b0;
         ms_data_buff        <= 32'h0;
+    end else if (do_flush) begin
+        ms_data_buff_valid  <= 1'b0;
+        ms_data_buff        <= 32'h0;
     end else if (!ms_data_buff_valid && ms_valid && data_sram_data_ok && !ws_allowin) begin
         ms_data_buff_valid  <= 1'b1;
         ms_data_buff        <= data_sram_rdata;
-    end else if (ws_allowin || ws_eret || ws_ex) begin
+    end else if (ws_allowin) begin
         ms_data_buff_valid  <= 1'b0;
         ms_data_buff        <= 32'h0;
     end
@@ -267,12 +269,13 @@ assign ms_inst_unable   = !ms_valid || ms_data_buff_valid || es_to_ms_data_ok;
 
 
 assign ms_fwd_valid = {4{ ms_to_ws_valid }} & ms_gr_strb;
-assign ms_blk_valid = ms_valid && ms_res_from_mem && !ms_ready_go && !ws_eret && !ws_ex;
+assign ms_blk_valid = ms_valid && ms_res_from_mem && !ms_ready_go && !do_flush;
 assign ms_rf_dest   = ms_dest;
 assign ms_rf_data   = ms_final_result;
 
-//lab14
-//search block
-assign ms_entryhi_block = ms_valid && ms_inst_mtc0 && (ms_cp0_addr == 8'b01010000);
+// exception
+assign ms_ex        = ms_valid && es_to_ms_ex;
+assign ms_excode    = es_to_ms_excode;
+assign ms_badvaddr  = es_to_ms_badvaddr;
 
 endmodule

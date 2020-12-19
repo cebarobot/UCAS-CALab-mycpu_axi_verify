@@ -57,16 +57,18 @@ wire        fs_inst_buff_full;
 wire        fs_valid;
 wire        ms_data_buff_full;
 
-wire [31:0] cp0_epc;
-wire [31:0] after_tlb_pc;
+wire        ws_do_flush;
+wire [31:0] ws_flush_pc;
+
+wire        fs_ex;
+wire        ds_ex;
+wire        es_ex;
+wire        ms_ex;
 wire        ws_ex;
-wire        ws_eret;
-wire        ws_after_tlb;
+
 wire [4:0]  ws_rf_dest;
 wire        ws_inst_mfc0;
 
-wire        ms_ex;
-wire        ms_eret;
 wire        ms_inst_mfc0;
 wire        es_inst_mfc0;
 
@@ -140,7 +142,7 @@ wire        inst_sram_data_ok_discard;
 always @ (posedge clk) begin
     if (reset) begin
         inst_sram_discard <= 2'b00;
-    end else if (ws_ex || ws_eret) begin
+    end else if (ws_do_flush) begin
         inst_sram_discard <= {pfs_inst_waiting, fs_inst_waiting};
     end else if (inst_sram_data_ok) begin
         if (inst_sram_discard == 2'b11) begin
@@ -163,7 +165,7 @@ wire        data_sram_data_ok_discard;
 always @ (posedge clk) begin
     if (reset) begin
         data_sram_discard <= 2'b00;
-    end else if (ws_ex || ws_eret) begin
+    end else if (ws_do_flush) begin
         data_sram_discard <= {es_data_waiting, ms_data_waiting};
     end else if (data_sram_data_ok) begin
         if (data_sram_discard == 2'b11) begin
@@ -178,13 +180,11 @@ end
 assign data_sram_data_ok_discard = data_sram_data_ok && ~|data_sram_discard;
 
 wire [31:0] inst_sram_vaddr;
-wire        inst_tlb_error;
 wire        inst_tlb_refill;
 wire        inst_tlb_invalid;
 wire        inst_tlb_modified;
 
 wire [31:0] data_sram_vaddr;
-wire        data_tlb_error;
 wire        data_tlb_refill;
 wire        data_tlb_invalid;
 wire        data_tlb_modified;
@@ -212,11 +212,14 @@ pre_if_stage pre_if_stage(
     .inst_sram_rdata        (inst_sram_rdata),
     .inst_sram_data_ok      (inst_sram_data_ok_discard),
     .pfs_inst_waiting       (pfs_inst_waiting),
-    .ws_eret                (ws_eret),
-    .ws_ex                  (ws_ex),
-    .ws_after_tlb           (ws_after_tlb),
-    .after_tlb_pc           (after_tlb_pc),
-    .cp0_epc                (cp0_epc)
+    // tlb exception report
+    .tlb_refill             (inst_tlb_refill),
+    .tlb_invalid            (inst_tlb_invalid),
+    .tlb_modified           (inst_tlb_modified),
+    // exception handle
+    .after_ex               (fs_ex || ds_ex || es_ex || ms_ex || ws_ex),
+    .do_flush               (ws_do_flush),
+    .flush_pc               (ws_flush_pc)
 );
 
 // IF stage
@@ -240,9 +243,9 @@ if_stage if_stage(
     .inst_sram_data_ok      (inst_sram_data_ok_discard),
     .fs_inst_waiting        (fs_inst_waiting),
     //exception
-    .ws_ex                  (ws_ex),
-    .ws_eret                (ws_eret),
-    .cp0_epc                (cp0_epc)
+    .fs_ex                  (fs_ex),
+    .after_ex               (ds_ex || es_ex || ms_ex || ws_ex),
+    .do_flush               (ws_do_flush)
 );
 // ID stage
 id_stage id_stage(
@@ -264,15 +267,18 @@ id_stage id_stage(
     // forward & block
     .es_fwd_blk_bus (es_fwd_blk_bus ),
     .ms_fwd_blk_bus (ms_fwd_blk_bus ),
-    //exception & block
-    .ws_ex          (ws_ex),
-    .ws_eret     (ws_eret),
+    // block
     .es_inst_mfc0   (es_inst_mfc0),
     .ms_inst_mfc0   (ms_inst_mfc0),
     .ws_inst_mfc0   (ws_inst_mfc0),
     .ws_rf_dest     (ws_rf_dest),
+    // cp0
     .cp0_cause      (cp0_cause),
-    .cp0_status     (cp0_status)
+    .cp0_status     (cp0_status),
+    // exception
+    .ds_ex                  (ds_ex),
+    .after_ex               (es_ex || ms_ex || ws_ex),
+    .do_flush               (ws_do_flush)
 );
 // EXE stage
 exe_stage exe_stage(
@@ -302,16 +308,20 @@ exe_stage exe_stage(
     .es_data_waiting        (es_data_waiting),
     // forward & block
     .es_fwd_blk_bus         (es_fwd_blk_bus ),
-    //exception & block
-    .ws_ex                  (ws_ex),
-    .ws_eret                (ws_eret),
-    .ms_ex                  (ms_ex),
-    .ms_eret                (ms_eret),
+    // block
     .es_inst_mfc0_o         (es_inst_mfc0),
     // tlbp
     .es_inst_tlbp           (es_inst_tlbp),
     .s1_found               (s1_found),
-    .s1_index               (s1_index)
+    .s1_index               (s1_index),
+    // tlb exception report
+    .tlb_refill             (data_tlb_refill),
+    .tlb_invalid            (data_tlb_invalid),
+    .tlb_modified           (data_tlb_modified),
+    // exception
+    .es_ex                  (es_ex),
+    .after_ex               (ms_ex || ws_ex),
+    .do_flush               (ws_do_flush)
 );
 // MEM stage
 mem_stage mem_stage(
@@ -334,12 +344,12 @@ mem_stage mem_stage(
     .ms_data_waiting        (ms_data_waiting),
     // forward & block
     .ms_fwd_blk_bus         (ms_fwd_blk_bus),
-    //exception & block
-    .ws_ex                  (ws_ex),
-    .ws_eret                (ws_eret),
-    .ms_ex_o                (ms_ex),
-    .ms_eret                (ms_eret),
-    .ms_inst_mfc0_o         (ms_inst_mfc0)
+    // block
+    .ms_inst_mfc0_o         (ms_inst_mfc0),
+    // exception
+    .ms_ex                  (ms_ex),
+    .after_ex               (ws_ex),
+    .do_flush               (ws_do_flush)
 );
 // WB stage
 wb_stage wb_stage(
@@ -358,16 +368,12 @@ wb_stage wb_stage(
     .debug_wb_rf_wnum (debug_wb_rf_wnum ),
     .debug_wb_rf_wdata(debug_wb_rf_wdata),
     //exception & block
-    .ws_inst_mfc0_o (ws_inst_mfc0),
-    .ws_rf_dest     (ws_rf_dest),
-    .ws_ex_o        (ws_ex),
-    .ws_eret        (ws_eret),
-    .ws_after_tlb   (ws_after_tlb),
-    .cp0_epc        (cp0_epc),
-    .after_tlb_pc   (after_tlb_pc),
-    .cp0_status     (cp0_status),
-    .cp0_cause      (cp0_cause),
-    .cp0_entryhi    (cp0_entryhi),
+    .ws_inst_mfc0_o     (ws_inst_mfc0),
+    .ws_rf_dest         (ws_rf_dest),
+    // cp0
+    .cp0_status         (cp0_status),
+    .cp0_cause          (cp0_cause),
+    .cp0_entryhi        (cp0_entryhi),
     //tlb
     // write port     
     .we                 (we),         
@@ -395,7 +401,11 @@ wb_stage wb_stage(
     .r_pfn1             (r_pfn1),     
     .r_c1               (r_c1),     
     .r_d1               (r_d1),     
-    .r_v1               (r_v1)
+    .r_v1               (r_v1),
+    // exception
+    .ws_ex              (ws_ex),
+    .do_flush           (ws_do_flush),
+    .flush_pc           (ws_flush_pc)
 );
 //TLB 
 tlb tlb(
@@ -452,7 +462,6 @@ tlb tlb(
 vpaddr_transfer inst_vpaddr (
     .vaddr          (inst_sram_vaddr),
     .paddr          (inst_sram_addr),
-    .tlb_error      (inst_tlb_error),
     .tlb_refill     (inst_tlb_refill),
     .tlb_invalid    (inst_tlb_invalid),
     .tlb_modified   (inst_tlb_modified),
@@ -464,7 +473,6 @@ vpaddr_transfer inst_vpaddr (
     .tlb_odd_page   (s0_odd_page),
     .tlb_asid       (s0_asid),
     .tlb_found      (s0_found),
-    .tlb_index      (s0_index),
     .tlb_pfn        (s0_pfn),
     .tlb_c          (s0_c),
     .tlb_d          (s0_d),
@@ -473,7 +481,6 @@ vpaddr_transfer inst_vpaddr (
 vpaddr_transfer data_vpaddr (
     .vaddr          (data_sram_vaddr),
     .paddr          (data_sram_addr),
-    .tlb_error      (data_tlb_error),
     .tlb_refill     (data_tlb_refill),
     .tlb_invalid    (data_tlb_invalid),
     .tlb_modified   (data_tlb_modified),
@@ -485,7 +492,6 @@ vpaddr_transfer data_vpaddr (
     .tlb_odd_page   (s1_odd_page),
     .tlb_asid       (s1_asid),
     .tlb_found      (s1_found),
-    .tlb_index      (s1_index),
     .tlb_pfn        (s1_pfn),
     .tlb_c          (s1_c),
     .tlb_d          (s1_d),

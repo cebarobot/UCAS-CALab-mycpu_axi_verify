@@ -24,16 +24,25 @@ module pre_if_stage(        // instruction require stage
     input           inst_sram_data_ok,
     output          pfs_inst_waiting, 
 
-    // exception & tlb handle
-    input           ws_eret,
-    input           ws_ex,
-    input           ws_after_tlb,
-    input   [31:0]  after_tlb_pc,
-    input   [31:0]  cp0_epc
+    // tlb exception report
+    input           tlb_refill,
+    input           tlb_invalid,
+    input           tlb_modified,
+
+    // exception handle
+    input           after_ex,
+    input           do_flush,
+    input   [31:0]  flush_pc
 );
 
-wire        pfs_valid;       // ? Is this needed?
+wire        to_pfs_valid;
+reg         pfs_valid;
+wire        pfs_allowin;
 wire        pfs_ready_go;
+
+wire        pfs_ex;
+wire [31:0] pfs_badvaddr;
+wire [ 4:0] pfs_excode;
 
 // br_bus
 wire        br_leaving_ds;
@@ -67,15 +76,30 @@ wire [31:0] pfs_inst;
 wire        pfs_inst_sram_data_ok;
 
 // between stage 
-assign pfs_valid        = ~reset;
-assign pfs_ready_go     = pfs_addr_ok;
-assign pfs_to_fs_valid  = pfs_valid && pfs_ready_go && !ws_eret && !ws_ex;
+assign to_pfs_valid     = ~reset && !pfs_ex && !after_ex;
+assign pfs_allowin      = !pfs_valid || pfs_ready_go && fs_allowin;
+assign pfs_ready_go     = pfs_addr_ok || pfs_ex;
+assign pfs_to_fs_valid  = pfs_valid && pfs_ready_go && !do_flush;
 
 assign pfs_to_fs_bus = {
-    pfs_inst_ok,    // 64:64
-    pfs_inst,       // 63:32
+    tlb_refill,     // 103
+    pfs_inst_ok,    // 102:102
+    pfs_inst,       // 101:70
+    pfs_excode,     // 69:65
+    pfs_badvaddr,   // 64:33
+    pfs_ex,         // 32
     pfs_pc          // 31:0
 };
+
+always @ (posedge clk) begin
+    if (reset) begin
+        pfs_valid <= 1'b0;
+    end else if (do_flush) begin
+        pfs_valid <= 1'b1;
+    end else if (pfs_allowin) begin
+        pfs_valid <= to_pfs_valid;
+    end
+end
 
 // branch control
 assign {
@@ -95,7 +119,7 @@ always @ (posedge clk) begin
     if (reset) begin
         br_taken_r  <= 1'b0;
         br_target_r <= 32'h0;
-    end else if (target_leaving_pfs || ws_eret || ws_ex) begin
+    end else if (target_leaving_pfs || do_flush) begin
         br_taken_r  <= 1'b0;
         br_target_r <= 32'h0;
     end else if (br_leaving_ds) begin
@@ -105,7 +129,7 @@ always @ (posedge clk) begin
 
     if (reset) begin
         bd_done_r   <= 1'b0;
-    end else if (target_leaving_pfs || ws_eret || ws_ex) begin
+    end else if (target_leaving_pfs || do_flush) begin
         bd_done_r   <= 1'b0;
     end else if (br_leaving_ds) begin
         bd_done_r   <= fs_valid || (pfs_to_fs_valid && fs_allowin);
@@ -122,22 +146,23 @@ assign bd_done      = bd_done_r || bd_done_w;
 always @ (posedge clk) begin
     if (reset) begin
         seq_pc <= 32'h_bfc00000;
-    end else if (ws_ex) begin
-        if (ws_after_tlb) begin
-            seq_pc <= after_tlb_pc;
-        end else begin
-            seq_pc <= `EX_ENTRY;
-        end
-    end else if (ws_eret) begin
-        seq_pc <= cp0_epc;
+    end else if (do_flush) begin
+        seq_pc <= flush_pc;
+    // end else if (ws_ex) begin
+    //     if (ws_after_tlb) begin
+    //         seq_pc <= after_tlb_pc;
+    //     end else begin
+    //         seq_pc <= `EX_ENTRY;
+    //     end
+    // end else if (ws_eret) begin
+    //     seq_pc <= cp0_epc;
     end else if (pfs_ready_go && fs_allowin) begin
         seq_pc <= pfs_pc + 32'h4;
     end
 end
 
 assign pfs_pc = 
-    br_taken && bd_done ?   br_target   :
-    seq_pc;
+    (br_taken && bd_done)? br_target : seq_pc;
 
 // ram control
 
@@ -146,7 +171,7 @@ assign inst_sram_req =
     // fs_allowin &&
     !pfs_addr_ok_r && 
     !(bd_done && br_stall) && 
-    !ws_eret && !ws_ex;
+    !do_flush;
 assign inst_sram_addr   = {pfs_pc[31:2], 2'b0};
 assign pfs_inst_waiting = pfs_addr_ok && !pfs_inst_ok;
 
@@ -155,9 +180,11 @@ assign pfs_inst_sram_data_ok = inst_sram_data_ok && fs_inst_unable;
 always @ (posedge clk) begin
     if (reset) begin
         pfs_addr_ok_r <= 1'b0;
+    end else if (do_flush) begin
+        pfs_addr_ok_r <= 1'b0;
     end else if (inst_sram_req && inst_sram_addr_ok && !fs_allowin) begin
         pfs_addr_ok_r <= 1'b1;
-    end else if (fs_allowin || ws_eret || ws_ex) begin
+    end else if (fs_allowin) begin
         pfs_addr_ok_r <= 1'b0;
     end
 end
@@ -167,7 +194,7 @@ always @ (posedge clk) begin
     if (reset) begin
         pfs_inst_buff_valid <= 1'b0;
         pfs_inst_buff       <= 32'h0;
-    end else if (fs_allowin || ws_eret || ws_ex) begin
+    end else if (fs_allowin || do_flush) begin
         pfs_inst_buff_valid <= 1'b0;
         pfs_inst_buff       <= 32'h0;
     end else if (pfs_addr_ok && pfs_inst_sram_data_ok && !fs_allowin) begin
@@ -182,6 +209,16 @@ assign pfs_inst =
     inst_sram_rdata;
 
 
-// exceptions are handled in if_stage
+// exceptions
+// exceptions are handled in here
+wire addr_error;
+assign addr_error = (pfs_pc[1:0] != 2'b0);
+
+assign pfs_ex = pfs_valid && (tlb_refill || tlb_invalid || addr_error);
+assign pfs_excode = 
+    (addr_error                 )? `EX_ADEL :
+    (tlb_refill || tlb_invalid  )? `EX_TLBL :
+    `EX_NO;
+assign pfs_badvaddr = inst_sram_addr;
 
 endmodule
