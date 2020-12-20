@@ -221,7 +221,7 @@ assign cp0_rdata =
 reg [18:0] entry_hi_vpn2;
 always @(posedge clk) begin
     if(wb_ex && excode_tlb)
-        entry_hi_vpn2 <= wb_pc[31:13];
+        entry_hi_vpn2 <= wb_badvaddr[31:13];
     else if(mtc0_we && cp0_addr == `CP0_ENTRYHI_ADDR)
         entry_hi_vpn2 <= cp0_wdata[31:13];
     else if(tlbr)

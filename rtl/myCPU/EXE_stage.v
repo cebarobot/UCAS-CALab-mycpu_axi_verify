@@ -600,6 +600,7 @@ wire load_ex;
 wire store_ex;
 wire tlb_load_ex;
 wire tlb_store_ex;
+wire tlb_refill_ex;
 wire tlb_mod_ex;
 
 assign overflow_ex = overflow && overflow_inst;
@@ -609,13 +610,15 @@ assign load_ex =
 assign store_ex = 
     (es_inst_sw && (st_addr != 2'b00)) || (es_inst_sh && (st_addr[0] != 1'b0));
 assign tlb_load_ex = 
-    (tlb_refill || tlb_invalid) && es_mem_re;
+    es_mem_re && (tlb_refill || tlb_invalid);
 assign tlb_store_ex =
-    (tlb_refill || tlb_invalid) && es_mem_we;
+    es_mem_we && (tlb_refill || tlb_invalid);
+assign tlb_refill_ex = 
+    (es_mem_re || es_mem_we) && tlb_refill;
 assign tlb_mod_ex = 
-    tlb_modified && es_mem_we;
+    es_mem_we && tlb_modified;
 
-assign es_ex = es_valid && (ds_to_es_ex || overflow_ex || load_ex || store_ex);
+assign es_ex = es_valid && (ds_to_es_ex || overflow_ex || load_ex || store_ex || tlb_load_ex || tlb_store_ex || tlb_mod_ex);
 // assign es_badvaddr = (fs_to_ds_ex) ? ds_to_es_badvaddr : es_alu_result;
 assign es_excode = 
     ds_to_es_ex ? ds_to_es_excode :
@@ -629,7 +632,7 @@ assign es_excode =
 assign es_badvaddr = 
     (ds_to_es_excode == `EX_ADEL || ds_to_es_excode == `EX_TLBL) ? ds_to_es_badvaddr : data_sram_addr;
 
-assign es_tlb_refill = ds_tlb_refill || tlb_refill;
+assign es_tlb_refill = ds_tlb_refill || tlb_refill_ex;
 assign es_bd = ds_to_es_bd;
 
 endmodule

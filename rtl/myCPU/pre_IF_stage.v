@@ -168,7 +168,7 @@ assign pfs_pc =
 
 assign inst_sram_req = 
     pfs_valid &&
-    // fs_allowin &&
+    !pfs_ex &&
     !pfs_addr_ok_r && 
     !(bd_done && br_stall) && 
     !do_flush;

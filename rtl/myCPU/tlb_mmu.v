@@ -213,15 +213,15 @@ module vpaddr_transfer (
 );
 
 wire unmapped;
-// assign unmapped = vaddr[31] & !vaddr[30];
-assign unmapped = 1'b1;
+assign unmapped = vaddr[31] & !vaddr[30];
+// assign unmapped = 1'b1;
 
 assign tlb_vpn2 = (inst_tlbp)? cp0_entryhi[31:13] : vaddr[31:13];
 assign tlb_odd_page = vaddr[12];
 assign tlb_asid = cp0_entryhi[7:0];
 
-// assign paddr = (unmapped)? {3'b0, vaddr[28:0]} : {tlb_pfn, vaddr[11:0]};
-assign paddr = vaddr;
+assign paddr = (unmapped)? {3'b0, vaddr[28:0]} : {tlb_pfn, vaddr[11:0]};
+// assign paddr = vaddr;
 
 assign tlb_refill   = !unmapped && !tlb_found;
 assign tlb_invalid  = !unmapped && tlb_found && !tlb_v;

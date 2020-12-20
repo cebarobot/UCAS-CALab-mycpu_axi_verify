@@ -97,6 +97,7 @@ wire [ 3:0] ws_s1_index;
 wire        ws_s1_found;  
 
 wire        ws_tlb_refill;
+wire        ex_tlb_refill_entry;
 
 assign {
     ws_tlb_refill   ,  //133:133
@@ -158,13 +159,15 @@ assign ws_eret      = ws_valid && ws_inst_eret;
 assign ws_excode    = ms_to_ws_excode;
 assign ws_badvaddr  = ms_to_ws_badvaddr;
 
+assign ex_tlb_refill_entry = 
+    (ws_excode == `EX_TLBL || ws_excode == `EX_TLBS) && ws_tlb_refill;
+
 assign ws_do_flush = ws_ex;
 assign ws_flush_pc = 
-    ws_after_tlb    ? ws_pc :
-    ws_inst_eret    ? cp0_epc :
-    ws_tlb_refill   ? `EX_TLB_REFILL_ENTRY :
+    ws_after_tlb        ? ws_pc :
+    ws_inst_eret        ? cp0_epc :
+    ex_tlb_refill_entry ? `EX_TLB_REFILL_ENTRY :
     `EX_ENTRY;
-
 
 //init
 assign ext_int_in = 6'b0;
