@@ -410,6 +410,7 @@ wb_stage wb_stage(
 //TLB 
 tlb tlb(
     .clk                (clk),  
+    .reset              (reset),
     // search port 0
     .s0_vpn2            (s0_vpn2),       
     .s0_odd_page        (s0_odd_page),     

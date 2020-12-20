@@ -230,7 +230,9 @@ end
 
 reg [7:0] entry_hi_asid;
 always @(posedge clk) begin
-    if(mtc0_we && cp0_addr == `CP0_ENTRYHI_ADDR)
+    if (rst) begin
+        entry_hi_asid <= 8'b0;
+    end else if(mtc0_we && cp0_addr == `CP0_ENTRYHI_ADDR)
         entry_hi_asid <= cp0_wdata[7:0];
     else if(tlbr)
         entry_hi_asid <= r_asid;
