@@ -71,13 +71,27 @@ wire [31:0] ws_final_result;
 wire [31:0] ws_pc;
 
 wire        ms_to_ws_ex;
+wire [ 4:0] ms_to_ws_excode;
+wire [31:0] ms_to_ws_badvaddr;
 wire        ws_bd;
 wire        ws_inst_eret;
 wire        ws_inst_syscall;  
 wire        ws_inst_mtc0;
-wire [ 7:0] cp0_addr;
 wire [ 4:0] ws_excode;
 wire [31:0] ws_badvaddr;
+
+wire [ 5:0] ext_int_in;
+wire [ 7:0] cp0_addr;
+wire [31:0] cp0_rdata;
+wire        cp0_we;
+wire [31:0] cp0_wdata;
+wire [31:0] cp0_epc;
+// wire [31:0] cp0_status;
+// wire [31:0] cp0_cause;
+// wire [31:0] cp0_entryhi;
+wire [31:0] cp0_entrylo0;
+wire [31:0] cp0_entrylo1;
+wire [31:0] cp0_index;
 
 wire [ 3:0] ws_s1_index;
 wire        ws_s1_found;  
@@ -134,14 +148,6 @@ always @(posedge clk) begin
 end
 
 //lab8
-wire [5:0]      ext_int_in;
-wire [31:0]     cp0_rdata;
-wire            cp0_we;
-wire [31:0]     cp0_wdata;
-
-wire [31:0]     ws_cp0_epc;
-wire [31:0]     ws_cp0_status;
-wire [31:0]     ws_cp0_cause;
 
 //valid
 assign ws_inst_mfc0_o = ws_valid && ws_inst_mfc0;
@@ -159,12 +165,6 @@ assign ws_flush_pc =
     ws_tlb_refill   ? `EX_TLB_REFILL_ENTRY :
     `EX_ENTRY;
 
-// assign cp0_epc = {32{ws_valid}} & ws_cp0_epc;
-// assign cp0_cause = {32{ws_valid}} & ws_cp0_cause;
-// assign cp0_status = {32{ws_valid}} & ws_cp0_status;
-assign cp0_epc      = ws_cp0_epc;
-assign cp0_cause    = ws_cp0_cause;
-assign cp0_status   = ws_cp0_status;
 
 //init
 assign ext_int_in = 6'b0;
@@ -187,10 +187,6 @@ assign cp0_wdata = ws_final_result;
 
 
 //lab14
-// wire [31:0] cp0_entryhi;
-wire [31:0] cp0_entrylo0;
-wire [31:0] cp0_entrylo1;
-wire [31:0] cp0_index;
 
 // write port
 // wire                       we;        
@@ -260,9 +256,9 @@ cp0 u_cp0(
     .mtc0_we            (cp0_we),
     .cp0_wdata          (cp0_wdata),
   
-    .cp0_epc            (ws_cp0_epc),  
-    .cp0_status         (ws_cp0_status),
-    .cp0_cause          (ws_cp0_cause),
+    .cp0_epc            (cp0_epc),  
+    .cp0_status         (cp0_status),
+    .cp0_cause          (cp0_cause),
 
 
     .cp0_entryhi        (cp0_entryhi),

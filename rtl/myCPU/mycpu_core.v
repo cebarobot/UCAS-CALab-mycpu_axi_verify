@@ -404,8 +404,8 @@ wb_stage wb_stage(
     .r_v1               (r_v1),
     // exception
     .ws_ex              (ws_ex),
-    .do_flush           (ws_do_flush),
-    .flush_pc           (ws_flush_pc)
+    .ws_do_flush        (ws_do_flush),
+    .ws_flush_pc        (ws_flush_pc)
 );
 //TLB 
 tlb tlb(
@@ -466,7 +466,7 @@ vpaddr_transfer inst_vpaddr (
     .tlb_invalid    (inst_tlb_invalid),
     .tlb_modified   (inst_tlb_modified),
 
-    .inst_tlbp      (0),
+    .inst_tlbp      (1'b0),
     .cp0_entryhi    (cp0_entryhi),
 
     .tlb_vpn2       (s0_vpn2),

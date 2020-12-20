@@ -172,7 +172,7 @@ assign inst_sram_req =
     !pfs_addr_ok_r && 
     !(bd_done && br_stall) && 
     !do_flush;
-assign inst_sram_addr   = {pfs_pc[31:2], 2'b0};
+assign inst_sram_addr   = pfs_pc;
 assign pfs_inst_waiting = pfs_addr_ok && !pfs_inst_ok;
 
 assign pfs_inst_sram_data_ok = inst_sram_data_ok && fs_inst_unable;

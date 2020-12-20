@@ -100,7 +100,7 @@ THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // `define RANDOM_SEED {7'b1010101,16'h0035}
 // `define RANDOM_SEED {7'b1010101,16'h0036}
 // `define RANDOM_SEED {7'b1010101,16'h0037}
-`define RANDOM_SEED {7'b1010101,16'h0038}
+// `define RANDOM_SEED {7'b1010101,16'h0038}
 // `define RANDOM_SEED {7'b1010101,16'h0039}
 // `define RANDOM_SEED {7'b1010101,16'h003A}
 // `define RANDOM_SEED {7'b1010101,16'h003B}
@@ -114,7 +114,7 @@ THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // `define RANDOM_SEED {7'b1010101,16'h02FF}
 
 /* NO delay */
-// `define RANDOM_SEED {7'b1010101,16'h00FF}
+`define RANDOM_SEED {7'b1010101,16'h00FF}
 
 `define CR0_ADDR       16'h8000   //32'hbfaf_8000 
 `define CR1_ADDR       16'h8004   //32'hbfaf_8004 
@@ -475,7 +475,7 @@ always @(posedge aclk)
 begin
     if(!aresetn)
     begin
-        open_trace <= 1'b0;
+        open_trace <= 1'b1;
     end
     else if(write_open_trace)
     begin
