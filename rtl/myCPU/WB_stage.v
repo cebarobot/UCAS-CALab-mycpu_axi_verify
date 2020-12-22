@@ -248,10 +248,10 @@ cp0 u_cp0(
     
     .wb_ex              (ws_ex && !ws_inst_eret && !ws_after_tlb),
     .wb_bd              (ws_bd),
+    .ws_eret            (ws_eret),
     .wb_excode          (ws_excode),
     .wb_pc              (ws_pc),
     .wb_badvaddr        (ws_badvaddr),
-    .ws_eret            (ws_eret),
     .ext_int_in         (ext_int_in),
 
     .cp0_addr           (cp0_addr),
@@ -259,10 +259,9 @@ cp0 u_cp0(
     .mtc0_we            (cp0_we),
     .cp0_wdata          (cp0_wdata),
   
-    .cp0_epc            (cp0_epc),  
     .cp0_status         (cp0_status),
     .cp0_cause          (cp0_cause),
-
+    .cp0_epc            (cp0_epc),  
 
     .cp0_entryhi        (cp0_entryhi),
     .cp0_entrylo0       (cp0_entrylo0),

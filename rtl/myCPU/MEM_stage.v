@@ -19,7 +19,7 @@ module mem_stage(
     //from data-sram
     input  [31                 :0] data_sram_rdata,
     input                          data_sram_data_ok,
-    input                          ms_data_waiting,
+    output                         ms_data_waiting,
 
     // forword from es
     output [`MS_FWD_BLK_BUS_WD -1:0] ms_fwd_blk_bus,

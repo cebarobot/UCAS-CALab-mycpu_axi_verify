@@ -11,15 +11,15 @@
       </db_ref>
    </db_ref_list>
    <zoom_setting>
-      <ZoomStartTime time="883318773fs"></ZoomStartTime>
-      <ZoomEndTime time="889453774fs"></ZoomEndTime>
-      <Cursor1Time time="884930439fs"></Cursor1Time>
+      <ZoomStartTime time="77228334fs"></ZoomStartTime>
+      <ZoomEndTime time="77487335fs"></ZoomEndTime>
+      <Cursor1Time time="77415000fs"></Cursor1Time>
    </zoom_setting>
    <column_width_setting>
-      <NameColumnWidth column_width="155"></NameColumnWidth>
-      <ValueColumnWidth column_width="79"></ValueColumnWidth>
+      <NameColumnWidth column_width="217"></NameColumnWidth>
+      <ValueColumnWidth column_width="116"></ValueColumnWidth>
    </column_width_setting>
-   <WVObjectSize size="107" />
+   <WVObjectSize size="128" />
    <wave_markers>
       <marker time="2205000" label="" />
       <marker time="2175000" label="" />
@@ -199,6 +199,10 @@
       <obj_property name="ElementShortName">pfs_pc[31:0]</obj_property>
       <obj_property name="ObjectShortName">pfs_pc[31:0]</obj_property>
    </wvobject>
+   <wvobject fp_name="/tb_top/soc_lite/u_cpu/u_mycpu_core/inst_sram_discard" type="array">
+      <obj_property name="ElementShortName">inst_sram_discard[1:0]</obj_property>
+      <obj_property name="ObjectShortName">inst_sram_discard[1:0]</obj_property>
+   </wvobject>
    <wvobject fp_name="/tb_top/soc_lite/u_cpu/u_mycpu_core/pre_if_stage/pfs_valid" type="logic">
       <obj_property name="ElementShortName">pfs_valid</obj_property>
       <obj_property name="ObjectShortName">pfs_valid</obj_property>
@@ -219,9 +223,17 @@
       <obj_property name="ElementShortName">ds_pc[31:0]</obj_property>
       <obj_property name="ObjectShortName">ds_pc[31:0]</obj_property>
    </wvobject>
+   <wvobject fp_name="/tb_top/soc_lite/u_cpu/u_mycpu_core/id_stage/ds_inst" type="array">
+      <obj_property name="ElementShortName">ds_inst[31:0]</obj_property>
+      <obj_property name="ObjectShortName">ds_inst[31:0]</obj_property>
+   </wvobject>
    <wvobject fp_name="/tb_top/soc_lite/u_cpu/u_mycpu_core/id_stage/ds_valid" type="logic">
       <obj_property name="ElementShortName">ds_valid</obj_property>
       <obj_property name="ObjectShortName">ds_valid</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_top/soc_lite/u_cpu/u_mycpu_core/id_stage/inst_eret" type="logic">
+      <obj_property name="ElementShortName">inst_eret</obj_property>
+      <obj_property name="ObjectShortName">inst_eret</obj_property>
    </wvobject>
    <wvobject fp_name="/tb_top/soc_lite/u_cpu/u_mycpu_core/exe_stage/es_pc" type="array">
       <obj_property name="ElementShortName">es_pc[31:0]</obj_property>
@@ -254,6 +266,18 @@
    <wvobject fp_name="/tb_top/soc_lite/u_cpu/u_mycpu_core/wb_stage/ws_do_flush" type="logic">
       <obj_property name="ElementShortName">ws_do_flush</obj_property>
       <obj_property name="ObjectShortName">ws_do_flush</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_top/soc_lite/u_cpu/u_mycpu_core/wb_stage/ws_flush_pc" type="array">
+      <obj_property name="ElementShortName">ws_flush_pc[31:0]</obj_property>
+      <obj_property name="ObjectShortName">ws_flush_pc[31:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_top/soc_lite/u_cpu/u_mycpu_core/wb_stage/ws_ex" type="logic">
+      <obj_property name="ElementShortName">ws_ex</obj_property>
+      <obj_property name="ObjectShortName">ws_ex</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_top/soc_lite/u_cpu/u_mycpu_core/wb_stage/ws_eret" type="logic">
+      <obj_property name="ElementShortName">ws_eret</obj_property>
+      <obj_property name="ObjectShortName">ws_eret</obj_property>
    </wvobject>
    <wvobject fp_name="vbus734" type="vbus">
       <obj_property name="label">vpn</obj_property>
@@ -533,6 +557,39 @@
       <obj_property name="ElementShortName">pfs_pc[31:0]</obj_property>
       <obj_property name="ObjectShortName">pfs_pc[31:0]</obj_property>
    </wvobject>
+   <wvobject fp_name="/tb_top/soc_lite/u_cpu/u_mycpu_core/pre_if_stage/inst_sram_req" type="logic">
+      <obj_property name="ElementShortName">inst_sram_req</obj_property>
+      <obj_property name="ObjectShortName">inst_sram_req</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_top/soc_lite/u_cpu/u_mycpu_core/inst_sram_discard" type="array">
+      <obj_property name="ElementShortName">inst_sram_discard[1:0]</obj_property>
+      <obj_property name="ObjectShortName">inst_sram_discard[1:0]</obj_property>
+      <obj_property name="Radix">BINARYRADIX</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_top/soc_lite/u_cpu/u_mycpu_core/inst_sram_data_ok" type="logic">
+      <obj_property name="ElementShortName">inst_sram_data_ok</obj_property>
+      <obj_property name="ObjectShortName">inst_sram_data_ok</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_top/soc_lite/u_cpu/u_mycpu_core/ws_do_flush" type="logic">
+      <obj_property name="ElementShortName">ws_do_flush</obj_property>
+      <obj_property name="ObjectShortName">ws_do_flush</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_top/soc_lite/u_cpu/u_mycpu_core/pre_if_stage/inst_sram_addr" type="array">
+      <obj_property name="ElementShortName">inst_sram_addr[31:0]</obj_property>
+      <obj_property name="ObjectShortName">inst_sram_addr[31:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_top/soc_lite/u_cpu/u_mycpu_core/pre_if_stage/inst_sram_addr_ok" type="logic">
+      <obj_property name="ElementShortName">inst_sram_addr_ok</obj_property>
+      <obj_property name="ObjectShortName">inst_sram_addr_ok</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_top/soc_lite/u_cpu/u_mycpu_core/pre_if_stage/inst_sram_data_ok" type="logic">
+      <obj_property name="ElementShortName">inst_sram_data_ok</obj_property>
+      <obj_property name="ObjectShortName">inst_sram_data_ok</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_top/soc_lite/u_cpu/u_mycpu_core/pre_if_stage/inst_sram_rdata" type="array">
+      <obj_property name="ElementShortName">inst_sram_rdata[31:0]</obj_property>
+      <obj_property name="ObjectShortName">inst_sram_rdata[31:0]</obj_property>
+   </wvobject>
    <wvobject fp_name="/tb_top/soc_lite/u_cpu/u_mycpu_core/pre_if_stage/pfs_valid" type="logic">
       <obj_property name="ElementShortName">pfs_valid</obj_property>
       <obj_property name="ObjectShortName">pfs_valid</obj_property>
@@ -657,9 +714,39 @@
    </wvobject>
    <wvobject type="divider" fp_name="divider165">
    </wvobject>
-   <wvobject fp_name="/tb_top/soc_lite/u_cpu/u_mycpu_core/wb_stage/ws_tlb_refill" type="logic">
-      <obj_property name="ElementShortName">ws_tlb_refill</obj_property>
-      <obj_property name="ObjectShortName">ws_tlb_refill</obj_property>
+   <wvobject fp_name="/tb_top/soc_lite/u_cpu/u_mycpu_core/id_stage/ds_valid" type="logic">
+      <obj_property name="ElementShortName">ds_valid</obj_property>
+      <obj_property name="ObjectShortName">ds_valid</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_top/soc_lite/u_cpu/u_mycpu_core/id_stage/ds_pc" type="array">
+      <obj_property name="ElementShortName">ds_pc[31:0]</obj_property>
+      <obj_property name="ObjectShortName">ds_pc[31:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_top/soc_lite/u_cpu/u_mycpu_core/id_stage/ds_inst" type="array">
+      <obj_property name="ElementShortName">ds_inst[31:0]</obj_property>
+      <obj_property name="ObjectShortName">ds_inst[31:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_top/soc_lite/u_cpu/u_mycpu_core/id_stage/rs" type="array">
+      <obj_property name="ElementShortName">rs[4:0]</obj_property>
+      <obj_property name="ObjectShortName">rs[4:0]</obj_property>
+      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_top/soc_lite/u_cpu/u_mycpu_core/id_stage/rs_value" type="array">
+      <obj_property name="ElementShortName">rs_value[31:0]</obj_property>
+      <obj_property name="ObjectShortName">rs_value[31:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_top/soc_lite/u_cpu/u_mycpu_core/id_stage/rt" type="array">
+      <obj_property name="ElementShortName">rt[4:0]</obj_property>
+      <obj_property name="ObjectShortName">rt[4:0]</obj_property>
+      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_top/soc_lite/u_cpu/u_mycpu_core/id_stage/rt_value" type="array">
+      <obj_property name="ElementShortName">rt_value[31:0]</obj_property>
+      <obj_property name="ObjectShortName">rt_value[31:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_top/soc_lite/u_cpu/u_mycpu_core/id_stage/rd" type="array">
+      <obj_property name="ElementShortName">rd[4:0]</obj_property>
+      <obj_property name="ObjectShortName">rd[4:0]</obj_property>
    </wvobject>
    <wvobject type="divider" fp_name="divider761">
    </wvobject>
@@ -806,6 +893,7 @@
    <wvobject fp_name="group129" type="group">
       <obj_property name="label">INST</obj_property>
       <obj_property name="DisplayName">label</obj_property>
+      <obj_property name="isExpanded"></obj_property>
       <wvobject fp_name="/tb_top/soc_lite/u_cpu/u_mycpu_core/id_stage/inst_add" type="logic">
          <obj_property name="ElementShortName">inst_add</obj_property>
          <obj_property name="ObjectShortName">inst_add</obj_property>

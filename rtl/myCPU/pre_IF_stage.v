@@ -23,6 +23,7 @@ module pre_if_stage(        // instruction require stage
     input   [31:0]  inst_sram_rdata,
     input           inst_sram_data_ok,
     output          pfs_inst_waiting, 
+    input           pfs_block,
 
     // tlb exception report
     input           tlb_refill,
@@ -78,7 +79,7 @@ wire        pfs_inst_sram_data_ok;
 // between stage 
 assign to_pfs_valid     = ~reset && !pfs_ex && !after_ex;
 assign pfs_allowin      = !pfs_valid || pfs_ready_go && fs_allowin;
-assign pfs_ready_go     = pfs_addr_ok || pfs_ex;
+assign pfs_ready_go     = pfs_addr_ok || (pfs_ex && !pfs_block);
 assign pfs_to_fs_valid  = pfs_valid && pfs_ready_go && !do_flush;
 
 assign pfs_to_fs_bus = {

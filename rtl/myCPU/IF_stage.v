@@ -103,10 +103,11 @@ always @ (posedge clk) begin
 end
 
 assign fs_inst_ok = pfs_to_fs_inst_ok || fs_inst_buff_valid || (fs_valid && inst_sram_data_ok);
-assign fs_inst = 
+assign fs_inst = {32{~fs_ex}} & (
     pfs_to_fs_inst_ok ?     pfs_to_fs_inst  :
     fs_inst_buff_valid ?    fs_inst_buff    :
-    inst_sram_rdata;
+    inst_sram_rdata
+);
 
 assign fs_valid_o = fs_valid;
 

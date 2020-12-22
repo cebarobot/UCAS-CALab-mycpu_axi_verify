@@ -212,6 +212,7 @@ pre_if_stage pre_if_stage(
     .inst_sram_rdata        (inst_sram_rdata),
     .inst_sram_data_ok      (inst_sram_data_ok_discard),
     .pfs_inst_waiting       (pfs_inst_waiting),
+    .pfs_block              (|inst_sram_discard || |data_sram_discard),
     // tlb exception report
     .tlb_refill             (inst_tlb_refill),
     .tlb_invalid            (inst_tlb_invalid),
